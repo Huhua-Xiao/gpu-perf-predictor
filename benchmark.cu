@@ -47,20 +47,26 @@ public:
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
 
+
+        // printf("Warming up the machine...\n");
         // warm up the machine
         for (int i = 0; i < 10; i++) {
             gemm.run();
         }
         // make sure the device synchronize
         cudaDeviceSynchronize(); 
+        // printf("Machine warmed up\n");
         
         // begin timing
+        // printf("Starting benchmark...\n");
         cudaEventRecord(start);
         for (int i = 0; i < 100; i++) {
             gemm.run();
         }
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
+
+        // printf("Benchmarking completed\n");
 
         float total_time_kernel;
         cudaEventElapsedTime(&total_time_kernel, start, stop);
