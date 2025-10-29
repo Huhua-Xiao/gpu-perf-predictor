@@ -1,6 +1,32 @@
 #include <cuda_runtime.h>
-#include <stdio.h>
 #include <cublas_v2.h>
+#include <cstdio>
+#include <cstdlib>
+
+
+// It is much more convenient to check the problem 
+// directly like this, without the need to write if condition
+
+#define CUDA_CHECK(cmd)                                                           \
+    do {                                                                          \
+        cudaError_t e_ = (cmd);                                                   \
+        if (e_ != cudaSuccess) {                                                  \
+            fprintf(stderr, "CUDA error %s:%d: %s\n", __FILE__, __LINE__,         \
+                    cudaGetErrorString(e_));                                      \
+            std::exit(1);                                                         \
+        }                                                                         \
+    } while (0)
+
+#define CUBLAS_CHECK(cmd)                                                         \
+    do {                                                                          \
+        cublasStatus_t s_ = (cmd);                                                \
+        if (s_ != CUBLAS_STATUS_SUCCESS) {                                        \
+            fprintf(stderr, "cuBLAS error %s:%d: status=%d\n", __FILE__, __LINE__,\
+                    int(s_));                                                     \
+            std::exit(1);                                                         \
+        }                                                                         \
+    } while (0)
+
 
 class GEMM {
     cublasHandle_t handle;
@@ -10,24 +36,11 @@ class GEMM {
 public:
     GEMM(int m, int n, int k) : 
         M(m), N(n), K(k), d_A(nullptr), d_B(nullptr), d_C(nullptr), handle(nullptr) {
-
-        cublasCreate(&handle);
-
-        cudaMalloc((void**)&d_A, M * K * sizeof(float));
-        if (!d_A) {
-            printf("cannot allocated array d_A of %d elements\n", M * K);
-            exit(1);
-        }
-        cudaMalloc((void**)&d_B, K * N * sizeof(float));
-        if (!d_B) {
-            printf("cannot allocated array d_B of %d elements\n", K * N);
-            exit(1);
-        }
-        cudaMalloc((void**)&d_C, M * N * sizeof(float));
-        if (!d_C) {
-            printf("cannot allocated array d_C of %d elements\n", M * N);
-            exit(1);
-        }
+        
+        CUBLAS_CHECK(cublasCreate(&handle));
+        CUDA_CHECK(cudaMalloc((void**)&d_A, M * K * sizeof(float)));
+        CUDA_CHECK(cudaMalloc((void**)&d_B, K * N * sizeof(float)));
+        CUDA_CHECK(cudaMalloc((void**)&d_C, M * N * sizeof(float)));
     }
 
     void host_to_device(float* h_A, float* h_B) {
@@ -45,7 +58,7 @@ public:
     }
 
     void device_to_host(float* h_C) {
-        cudaMemcpy(h_C, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost);
+        CUDA_CHECK(cudaMemcpy(h_C, d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost));
     }
 
     ~GEMM() {
