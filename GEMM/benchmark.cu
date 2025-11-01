@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
+#include <random>
 
 using namespace std;
 
@@ -34,6 +35,7 @@ struct PerfData{
     string precision; // FP32, TF32、FP16
     int repeats;
     int inner_iters;
+    string algorithm;
     
     // Runtime statistics (per-run averaged over inner_iters)
     double time_ms_mean;
@@ -58,7 +60,7 @@ static void write_csv_header(std::ofstream& f) {
     f << "gpu_name,device_id,cc_major,cc_minor,sm_count,l2_size_bytes,shared_mem_per_sm,total_global_mem,"
       << "mem_bandwidth_GBps_est,peak_flops_fp32_GFLOPs_est,driver_version,cuda_runtime_version,"
       << "max_threads_per_sm,max_threads_per_block,warp_size,"
-      << "M,N,K,precision,repeats,inner_iters,"
+      << "M,N,K,precision,repeats,inner_iters,algorithm,"
       << "time_ms_mean,time_ms_median,time_ms_p95,time_ms_stddev,"
       << "gflops_mean,gflops_median,gflops_p95,"
       << "flops_total,io_bytes_theoretical,gflops_over_peak_mean,arithmetic_intensity_FLOPs_per_Byte,"
@@ -85,6 +87,7 @@ static void write_csv_row(std::ofstream& f, const PerfData& r) {
       << r.precision << ","
       << r.repeats << ","
       << r.inner_iters << ","
+      << r.algorithm << ","
       << std::fixed << std::setprecision(6) << r.time_ms_mean << ","
       << std::fixed << std::setprecision(6) << r.time_ms_median << ","
       << std::fixed << std::setprecision(6) << r.time_ms_p95 << ","
@@ -174,8 +177,9 @@ class Collector {
     int max_threads_per_sm;
     int max_threads_per_block;
     int warp_size;
+    string algorithm;
 
-    void gpu_info() {
+    void gpu_info(int method) {
         device_id = 0;
         cudaDeviceProp prop;
         cudaGetDevice(&device_id);
@@ -197,7 +201,19 @@ class Collector {
         cudaDriverGetVersion(&driver_version);
         cudaRuntimeGetVersion(&cuda_runtime_version);
 
+        if (method == 0) {
+            algorithm = "cuBLAS";
+        }
+        else if (method == 1) {
+            algorithm = "Custom-MM";
+        }
+        else {
+            fprintf(stderr, "Invalid method=%d (use 0=cublas, 1=custom)\n", method);
+            std::exit(1);
+        }
+
         printf("GPU: %s\n", gpu_name.c_str());
+        printf("Algorithm: %s\n", algorithm.c_str());
         printf("Compute Capability: %d.%d\n", cc_major, cc_minor);
         printf("SM Count: %d\n", sm_count);
         printf("Peak FP32: %.1f GFLOPS\n", peak_flops_fp32_GFLOPs_est);
@@ -207,8 +223,8 @@ class Collector {
 
 public:
 
-    Collector() {
-        gpu_info();
+    Collector(int method) {
+        gpu_info(method);
     }
 
     PerfData benchmark(int M, int N, int K, int inner_iters = 100, int repeats = 10) {
@@ -220,7 +236,7 @@ public:
         vector<float> h_A(M * K, 1.0f);
         vector<float> h_B(K * N, 1.0f);
 
-        GEMM gemm(M, N, K);
+        GEMM gemm(M, N, K, (algorithm == "cuBLAS") ? 0 : 1);
         gemm.host_to_device(h_A.data(), h_B.data());
 
         // Warm up
@@ -292,6 +308,7 @@ public:
         perf_data.N = N;
         perf_data.K = K;
         perf_data.precision = "FP32";
+        perf_data.algorithm = algorithm;
 
         perf_data.time_ms_mean = t_mean_ms;
         perf_data.time_ms_median = t_median_ms;
@@ -315,19 +332,38 @@ public:
         return perf_data;
     }
 
-    void differ_size_loop() {
-        vector<tuple<int, int, int>> sizes = {
-            {512, 512, 512},
-            {1024, 1024, 1024},
-            {2048, 2048, 2048},
-            {4096, 4096, 4096},
-            {8192, 8192, 8192}
-        };
+    void differ_size_loop(int num_samples) {
+        random_device rd;
+        mt19937 gen(rd());
 
-        for (auto [M, N, K] : sizes) {
-            printf("Benchmarking %dx%dx%d...\n", M, N, K);
+        uniform_real_distribution<> uniform(0.0, 1.0);
+
+        printf("Starting benchmarking with %d samples...\n", num_samples);
+
+        for (int i = 0; i < num_samples; i++){
+
+            double r1 = uniform(gen);
+            double r2 = uniform(gen);
+            double r3 = uniform(gen);
+            
+            int M = 128 + (int)(r1 * r1 * (8192 - 128));
+            int N = 128 + (int)(r2 * r2 * (8192 - 128));
+            int K = 128 + (int)(r3 * r3 * (8192 - 128));
+
+            // printf("Benchmarking sample %d/%d: M=%d, N=%d, K=%d\n ", i + 1, num_samples, M, N, K);
+
             data.push_back(benchmark(M, N, K));
+            cudaDeviceSynchronize();
+        
+            // Periodic save for every 1000 samples
+            if ((i + 1) % 1000 == 0) {
+                save_to_csv("benchmark_results.csv");
+                data.clear(); 
+                printf("  → Checkpoint saved (%d samples so far)\n\n", i + 1);
+            }
         }
+
+        printf("Done!\n");
     }
 
     void save_to_csv(const std::string& filename) {
@@ -347,9 +383,29 @@ public:
     }
 };
 
-int main() {
-    Collector collector;
-    collector.differ_size_loop();
+int main(int argc, char** argv) {
+    if (argc < 3) {
+        printf("Usage: %s <method> <num_samples>\n", argv[0]);
+        printf("  method: 0 = cuBLAS, 1 = Custom-MM\n");
+        printf("  num_samples: number of samples to run (e.g., 10000)\n");
+        return 1;
+    }
+
+    int method = std::stoi(argv[1]);
+    int num_samples = std::stoi(argv[2]);
+
+    if (method != 0 && method != 1) {
+        printf("Error: method must be 0 (cuBLAS) or 1 (Custom-MM)\n");
+        return 1;
+    }
+
+    if (num_samples <= 0) {
+        printf("Error: num_samples must be > 0\n");
+        return 1;
+    }
+
+    Collector collector(method);
+    collector.differ_size_loop(num_samples);
     collector.save_to_csv("benchmark_results.csv");
     return 0;
 }
