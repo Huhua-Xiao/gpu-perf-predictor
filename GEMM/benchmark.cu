@@ -5,7 +5,6 @@
 #include <cmath>
 #include <vector>
 #include <string>
-#include <tuple>
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
@@ -13,31 +12,36 @@
 
 using namespace std;
 
-struct PerfData{
-    // static GPU Specs
+struct PerfData {
     string gpu_name;
     int device_id;
-    int cc_major, cc_minor; // Compute Capability
-    int sm_count; // Streaming Multiprocessor
-    long long l2_size_bytes; // l2 cache
-    int shared_mem_per_sm; // shared memory for each sm
-    long long total_global_mem; // total global memory
-    double mem_bandwidth_GBps_est; // estimated bandwidth
-    double peak_flops_fp32_GFLOPs_est; // estimate the peak of fp32 GFLOPs 
-    int driver_version; //  drive versions
-    int cuda_runtime_version; // cuda drive versions
-    int max_threads_per_sm; // max threads per sm
-    int max_threads_per_block; // max threads per block
-    int warp_size; // warp size
+    int cc_major, cc_minor;
+    int sm_count;
+    long long l2_size_bytes;
+    int shared_mem_per_sm;
+    long long total_global_mem;
+    double mem_bandwidth_GBps_est;
+    double peak_flops_fp32_GFLOPs_est;
+    int driver_version;
+    int cuda_runtime_version;
+    int max_threads_per_sm;
+    int max_threads_per_block;
+    int warp_size;
 
-    // Kernel Configuration
-    int M, N, K; // size of MM
-    string precision; // FP32, TF32、FP16
+    int M, N, K;
+    string precision;
     int repeats;
     int inner_iters;
     string algorithm;
+    int tile_width;
     
-    // Runtime statistics (per-run averaged over inner_iters)
+    double theoretical_occupancy;
+    int blocks_per_sm;
+    int grid_x, grid_y;
+    int block_x, block_y;
+    int registers_per_thread;
+    int shared_mem_per_block;
+    
     double time_ms_mean;
     double time_ms_median;
     double time_ms_p95;
@@ -46,11 +50,10 @@ struct PerfData{
     double gflops_median;
     double gflops_p95;
 
-    // Derived
-    double flops_total; // 2*M*N*K
-    double io_bytes_theoretical; // (MK+KN+MN)*sizeof(float)
-    double gflops_over_peak_mean; // gflops_mean / peak_fp32
-    double arithmetic_intensity_FLOPs_per_Byte; // flops / io_bytes_theoretical
+    double ops_total;
+    double io_bytes_theoretical;
+    double gops_over_peak_mean;
+    double arithmetic_intensity_ops_per_byte;
     double memory_throughput_GBps;
     double memory_efficiency_pct;
     double compute_efficiency_pct;
@@ -60,10 +63,12 @@ static void write_csv_header(std::ofstream& f) {
     f << "gpu_name,device_id,cc_major,cc_minor,sm_count,l2_size_bytes,shared_mem_per_sm,total_global_mem,"
       << "mem_bandwidth_GBps_est,peak_flops_fp32_GFLOPs_est,driver_version,cuda_runtime_version,"
       << "max_threads_per_sm,max_threads_per_block,warp_size,"
-      << "M,N,K,precision,repeats,inner_iters,algorithm,"
+      << "M,N,K,precision,repeats,inner_iters,algorithm,tile_width,"
+      << "theoretical_occupancy,blocks_per_sm,grid_x,grid_y,block_x,block_y,"
+      << "registers_per_thread,shared_mem_per_block,"
       << "time_ms_mean,time_ms_median,time_ms_p95,time_ms_stddev,"
       << "gflops_mean,gflops_median,gflops_p95,"
-      << "flops_total,io_bytes_theoretical,gflops_over_peak_mean,arithmetic_intensity_FLOPs_per_Byte,"
+      << "ops_total,io_bytes_theoretical,gops_over_peak_mean,arithmetic_intensity_ops_per_byte,"
       << "memory_throughput_GBps,memory_efficiency_pct,compute_efficiency_pct\n";
 }
 
@@ -88,6 +93,13 @@ static void write_csv_row(std::ofstream& f, const PerfData& r) {
       << r.repeats << ","
       << r.inner_iters << ","
       << r.algorithm << ","
+      << r.tile_width << ","
+      << std::fixed << std::setprecision(6) << r.theoretical_occupancy << ","
+      << r.blocks_per_sm << ","
+      << r.grid_x << "," << r.grid_y << ","
+      << r.block_x << "," << r.block_y << ","
+      << r.registers_per_thread << ","
+      << r.shared_mem_per_block << ","
       << std::fixed << std::setprecision(6) << r.time_ms_mean << ","
       << std::fixed << std::setprecision(6) << r.time_ms_median << ","
       << std::fixed << std::setprecision(6) << r.time_ms_p95 << ","
@@ -95,53 +107,57 @@ static void write_csv_row(std::ofstream& f, const PerfData& r) {
       << std::fixed << std::setprecision(3) << r.gflops_mean << ","
       << std::fixed << std::setprecision(3) << r.gflops_median << ","
       << std::fixed << std::setprecision(3) << r.gflops_p95 << ","
-      << std::fixed << std::setprecision(0) << r.flops_total << ","
+      << std::fixed << std::setprecision(0) << r.ops_total << ","
       << std::fixed << std::setprecision(0) << r.io_bytes_theoretical << ","
-      << std::fixed << std::setprecision(6) << r.gflops_over_peak_mean << ","
-      << std::fixed << std::setprecision(6) << r.arithmetic_intensity_FLOPs_per_Byte << ","
+      << std::fixed << std::setprecision(6) << r.gops_over_peak_mean << ","
+      << std::fixed << std::setprecision(6) << r.arithmetic_intensity_ops_per_byte << ","
       << std::fixed << std::setprecision(3) << r.memory_throughput_GBps << ","
       << std::fixed << std::setprecision(3) << r.memory_efficiency_pct << ","
       << std::fixed << std::setprecision(3) << r.compute_efficiency_pct
       << "\n";
 }
 
-// memoryClock * busWidth/8 * 2 / 1e9
 static double estimate_mem_bw_GBs(const cudaDeviceProp& p) {
     double memClockHz = static_cast<double>(p.memoryClockRate) * 1000.0;
-    double busBytes   = static_cast<double>(p.memoryBusWidth) / 8.0;
-    double bw = (memClockHz * busBytes * 2.0) / 1e9; // GB/s
-    return bw;
+    double busBytes = static_cast<double>(p.memoryBusWidth) / 8.0;
+    return (memClockHz * busBytes * 2.0) / 1e9;
 }
 
-static int fp32_cores_per_sm_est(int major, int minor) {
-    int cc = major * 10 + minor;
-    if (cc >= 80) return 128;  // Ampere and newer
-    if (cc >= 75) return 64;   // Turing
-    if (cc >= 70) return 64;   // Volta
-    if (cc >= 60) return 128;  // Pascal
+static int fp32_cores_per_sm(int major, int minor) {
+    const int cc = major*10 + minor;
+    // Kepler
+    if (cc >= 30 && cc <= 37) return 192;      // 3.0/3.5/3.7
+    // Maxwell
+    if (cc >= 50 && cc <= 53) return 128;      // 5.0/5.2/5.3
+    // Pascal
+    if (cc == 60)           return 64;         // GP100
+    if (cc == 61 || cc == 62) return 128;      // GP102/104/106, TX2
+    // Volta
+    if (cc == 70)           return 64;
+    // Turing
+    if (cc == 75)           return 64;
+    // Ampere / Ada / Hopper / Blackwell
+    if (cc == 80 || cc == 86 || cc == 89 || cc == 90) return 128;
     return 128;
 }
 
-static double estimate_peak_fp32_GFLOPs(const cudaDeviceProp& p) {
-    int cores = fp32_cores_per_sm_est(p.major, p.minor);
-    double sm_hz = p.clockRate * 1000.0; // kHz->Hz
-    return static_cast<double>(p.multiProcessorCount) * cores * 2.0 * (sm_hz / 1e9);
+static double peak_fp32_gflops(const cudaDeviceProp& p) {
+    const double ghz = static_cast<double>(p.clockRate) / 1e6;
+    return static_cast<double>(p.multiProcessorCount)
+         * fp32_cores_per_sm(p.major, p.minor)
+         * 2.0 * ghz * 1.2; // FMA and boost
 }
 
 static void summarize(const std::vector<double>& samples_ms, double& mean, double& median, double& p95, double& stddev) {
-    if (samples_ms.empty()) { 
+    if (samples_ms.empty()) {
         mean = median = p95 = stddev = 0.0; 
         return; 
     }
     
-    // Calculate mean
     double s = 0.0; 
-    for (auto x : samples_ms) {
-        s += x;
-    }
+    for (auto x : samples_ms) s += x;
     mean = s / samples_ms.size();
 
-    // Calculate standard deviation
     double sq_sum = 0.0;
     for (auto x : samples_ms) {
         double diff = x - mean;
@@ -149,7 +165,6 @@ static void summarize(const std::vector<double>& samples_ms, double& mean, doubl
     }
     stddev = sqrt(sq_sum / samples_ms.size());
 
-    // Calculate median and p95
     std::vector<double> v = samples_ms;
     std::sort(v.begin(), v.end());
     median = v[v.size()/2];
@@ -158,11 +173,9 @@ static void summarize(const std::vector<double>& samples_ms, double& mean, doubl
     p95 = v[idx95];
 }
 
-
 class Collector {
     vector<PerfData> data;
     
-    // static GPU Specs
     string gpu_name;
     int device_id;
     int cc_major, cc_minor; 
@@ -178,12 +191,13 @@ class Collector {
     int max_threads_per_block;
     int warp_size;
     string algorithm;
+    string precision;
 
     void gpu_info(int method) {
         device_id = 0;
         cudaDeviceProp prop;
-        cudaGetDevice(&device_id);
-        cudaGetDeviceProperties(&prop, device_id);
+        CUDA_CHECK(cudaSetDevice(device_id));
+        CUDA_CHECK(cudaGetDeviceProperties(&prop, device_id));
 
         gpu_name = prop.name;
         cc_major = prop.major; 
@@ -193,42 +207,34 @@ class Collector {
         l2_size_bytes = static_cast<long long>(prop.l2CacheSize);
         total_global_mem = static_cast<long long>(prop.totalGlobalMem);
         mem_bandwidth_GBps_est = estimate_mem_bw_GBs(prop);
-        peak_flops_fp32_GFLOPs_est = estimate_peak_fp32_GFLOPs(prop);
+        peak_flops_fp32_GFLOPs_est = peak_fp32_gflops(prop);
         max_threads_per_sm = prop.maxThreadsPerMultiProcessor;
         max_threads_per_block = prop.maxThreadsPerBlock;
         warp_size = prop.warpSize;
-        
-        cudaDriverGetVersion(&driver_version);
-        cudaRuntimeGetVersion(&cuda_runtime_version);
 
-        if (method == 0) {
-            algorithm = "cuBLAS";
-        }
-        else if (method == 1) {
-            algorithm = "Custom-MM";
-        }
-        else {
-            fprintf(stderr, "Invalid method=%d (use 0=cublas, 1=custom)\n", method);
-            std::exit(1);
-        }
+        CUDA_CHECK(cudaDriverGetVersion(&driver_version));
+        CUDA_CHECK(cudaRuntimeGetVersion(&cuda_runtime_version));
+
+        algorithm = (method == 0) ? "cuBLAS" : "Custom-MM";
+        precision = "fp32";
 
         printf("GPU: %s\n", gpu_name.c_str());
         printf("Algorithm: %s\n", algorithm.c_str());
         printf("Compute Capability: %d.%d\n", cc_major, cc_minor);
-        printf("SM Count: %d\n", sm_count);
         printf("Peak FP32: %.1f GFLOPS\n", peak_flops_fp32_GFLOPs_est);
         printf("Memory Bandwidth: %.1f GB/s\n", mem_bandwidth_GBps_est);
         printf("\n");
     }
 
 public:
-
     Collector(int method) {
         gpu_info(method);
     }
 
     PerfData benchmark(int M, int N, int K, int inner_iters = 100, int repeats = 10) {
-
+        printf("Benchmarking: M=%d, N=%d, K=%d (%.1f GFLOPS theoretical)\n", 
+               M, N, K, (2.0 * M * N * K) / 1e9);
+        
         PerfData perf_data;
         perf_data.inner_iters = inner_iters;
         perf_data.repeats = repeats;
@@ -239,17 +245,54 @@ public:
         GEMM gemm(M, N, K, (algorithm == "cuBLAS") ? 0 : 1);
         gemm.host_to_device(h_A.data(), h_B.data());
 
-        // Warm up
-        for (int i = 0; i < 10; i++) {
-            gemm.run();
+        // Calculate occupancy and kernel attributes
+        double theoretical_occ      = 0.0;
+        int    blocks_per_sm_val    = 0;
+
+        // Launch shape for our tiled kernel
+        const int block_x = TILE_WIDTH;
+        const int block_y = TILE_WIDTH;
+        const int grid_x  = (N + TILE_WIDTH - 1) / TILE_WIDTH;
+        const int grid_y  = (M + TILE_WIDTH - 1) / TILE_WIDTH;
+
+        int registers_per_thread   = 0;
+        int shared_mem_per_block   = 0;
+        const int blockSize        = TILE_WIDTH * TILE_WIDTH;
+
+            
+        cudaFuncAttributes attr{};
+        if (cudaFuncGetAttributes(&attr, matrixMulKernel) == cudaSuccess) {
+            registers_per_thread = attr.numRegs;
+            shared_mem_per_block = attr.sharedSizeBytes;
+        } else {
+            printf("Warning: failed to get kernel attrs, will leave regs/shared=0\n");
         }
-        cudaDeviceSynchronize(); 
+
+        int tmp_blocks = 0;
+        cudaError_t occ_err =
+            cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+                &tmp_blocks,
+                matrixMulKernel,
+                blockSize,
+                /*dynamicSMemBytes=*/0);
+
+        if (occ_err == cudaSuccess && tmp_blocks > 0) {
+            blocks_per_sm_val = tmp_blocks;
+            theoretical_occ   = double(blocks_per_sm_val * blockSize) / max_threads_per_sm;
+            if (theoretical_occ > 1.0)
+                theoretical_occ = 1.0;   // clamp
+        } else {
+            printf("Warning: Failed to calculate occupancy: %s\n",
+                cudaGetErrorString(occ_err));
+        }
+
+        // Warm-up
+        for (int i = 0; i < 10; i++) gemm.run();
 
         vector<double> per_run_ms;
         per_run_ms.reserve(perf_data.repeats); 
         
-        // Timing loop
-        for (int j = 0; j < perf_data.repeats; j++){
+        for (int j = 0; j < perf_data.repeats; j++) {
             cudaEvent_t start, stop;
             cudaEventCreate(&start);
             cudaEventCreate(&stop);
@@ -270,24 +313,21 @@ public:
             per_run_ms.push_back(avg_ms);
         }
 
-        // Calculate statistics
         double t_mean_ms=0, t_median_ms=0, t_p95_ms=0, t_stddev_ms=0;
         summarize(per_run_ms, t_mean_ms, t_median_ms, t_p95_ms, t_stddev_ms);
 
-        // Calculate metrics
-        const double flops = 2.0 * static_cast<double>(M) * N * K;
-        const double io_bytes_theoretical = ((double)M * K + (double)K * N + (double)M * N) * sizeof(float);
-        const double AI = flops / io_bytes_theoretical; 
+        const double ops = 2.0 * static_cast<double>(M) * N * K;
+        const double io_bytes_theoretical = ((double)M*K + (double)K*N + (double)M*N) * sizeof(float);
+        const double AI = ops / io_bytes_theoretical; 
 
-        double gflops_mean   = (flops / 1e9) / (t_mean_ms   / 1000.0);
-        double gflops_median = (flops / 1e9) / (t_median_ms / 1000.0);
-        double gflops_p95    = (flops / 1e9) / (t_p95_ms    / 1000.0);
+        double gflops_mean   = (ops / 1e9) / (t_mean_ms   / 1000.0);
+        double gflops_median = (ops / 1e9) / (t_median_ms / 1000.0);
+        double gflops_p95    = (ops / 1e9) / (t_p95_ms    / 1000.0);
 
         double memory_throughput_GBps = (io_bytes_theoretical / 1e9) / (t_mean_ms / 1000.0);
         double memory_efficiency_pct = (memory_throughput_GBps / mem_bandwidth_GBps_est) * 100.0;
         double compute_efficiency_pct = (gflops_mean / peak_flops_fp32_GFLOPs_est) * 100.0;
 
-        // Fill PerfData structure
         perf_data.gpu_name = gpu_name;
         perf_data.device_id = device_id;
         perf_data.cc_major = cc_major;
@@ -307,8 +347,18 @@ public:
         perf_data.M = M;
         perf_data.N = N;
         perf_data.K = K;
-        perf_data.precision = "FP32";
+        perf_data.precision = precision;
         perf_data.algorithm = algorithm;
+        perf_data.tile_width = TILE_WIDTH;
+
+        perf_data.theoretical_occupancy = theoretical_occ;
+        perf_data.blocks_per_sm = blocks_per_sm_val;
+        perf_data.grid_x = grid_x;
+        perf_data.grid_y = grid_y;
+        perf_data.block_x = block_x;
+        perf_data.block_y = block_y;
+        perf_data.registers_per_thread = registers_per_thread;
+        perf_data.shared_mem_per_block = shared_mem_per_block;
 
         perf_data.time_ms_mean = t_mean_ms;
         perf_data.time_ms_median = t_median_ms;
@@ -319,11 +369,10 @@ public:
         perf_data.gflops_median = gflops_median;
         perf_data.gflops_p95 = gflops_p95;
 
-        perf_data.flops_total = flops;
+        perf_data.ops_total = ops;
         perf_data.io_bytes_theoretical = io_bytes_theoretical;
-        perf_data.arithmetic_intensity_FLOPs_per_Byte = AI;
-        perf_data.gflops_over_peak_mean = (peak_flops_fp32_GFLOPs_est > 0.0) ? 
-                                           (gflops_mean / peak_flops_fp32_GFLOPs_est) : 0.0;
+        perf_data.arithmetic_intensity_ops_per_byte = AI;
+        perf_data.gops_over_peak_mean = gflops_mean / peak_flops_fp32_GFLOPs_est;
         
         perf_data.memory_throughput_GBps = memory_throughput_GBps;
         perf_data.memory_efficiency_pct = memory_efficiency_pct;
@@ -335,13 +384,9 @@ public:
     void differ_size_loop(int num_samples) {
         random_device rd;
         mt19937 gen(rd());
-
         uniform_real_distribution<> uniform(0.0, 1.0);
 
-        printf("Starting benchmarking with %d samples...\n", num_samples);
-
-        for (int i = 0; i < num_samples; i++){
-
+        for (int i = 0; i < num_samples; i++) {
             double r1 = uniform(gen);
             double r2 = uniform(gen);
             double r3 = uniform(gen);
@@ -350,20 +395,14 @@ public:
             int N = 128 + (int)(r2 * r2 * (8192 - 128));
             int K = 128 + (int)(r3 * r3 * (8192 - 128));
 
-            // printf("Benchmarking sample %d/%d: M=%d, N=%d, K=%d\n ", i + 1, num_samples, M, N, K);
-
             data.push_back(benchmark(M, N, K));
             cudaDeviceSynchronize();
         
-            // Periodic save for every 1000 samples
             if ((i + 1) % 1000 == 0) {
                 save_to_csv("benchmark_results.csv");
                 data.clear(); 
-                printf("  → Checkpoint saved (%d samples so far)\n\n", i + 1);
             }
         }
-
-        printf("Done!\n");
     }
 
     void save_to_csv(const std::string& filename) {
@@ -372,22 +411,18 @@ public:
         fin.close();
 
         std::ofstream f(filename, std::ios::app);
-        if (!f.is_open()) {
-            printf("Failed to open file: %s\n", filename.c_str());
-            return;
-        }
+        if (!f.is_open()) return;
         if (!exists) write_csv_header(f);
         for (const auto& d : data) write_csv_row(f, d);
         f.close();
-        printf("Results saved to %s\n", filename.c_str());
     }
 };
 
 int main(int argc, char** argv) {
     if (argc < 3) {
         printf("Usage: %s <method> <num_samples>\n", argv[0]);
-        printf("  method: 0 = cuBLAS, 1 = Custom-MM\n");
-        printf("  num_samples: number of samples to run (e.g., 10000)\n");
+        printf("  method: 0 = cuBLAS, 1 = Custom-Tiled\n");
+        printf("  num_samples: number of samples to run\n");
         return 1;
     }
 
