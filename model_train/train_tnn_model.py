@@ -154,32 +154,6 @@ def train_xgb(X_train, y_train):
     print("Best parameters found: ", grid_search.best_params_)
     print("Best cross-validation score (negative mean squared error): ", grid_search.best_score_)
 
-
-    # print("\n" + "="*70)
-    # print("GRID SEARCH DETAILED RESULTS")
-    # print("="*70)
-    
-    # # 获取结果 DataFrame
-    # results_df = pd.DataFrame(grid_search.cv_results_)
-    
-    # # 按平均分数排序，显示 Top 5
-    # results_df = results_df.sort_values('mean_test_score', ascending=False)
-    
-    # print("\nTop 5 Parameter Combinations:")
-    # print("-"*70)
-    # for idx, row in results_df.head(5).iterrows():
-    #     print(f"\nRank {idx+1}:")
-    #     print(f"  Parameters: {row['params']}")
-    #     print(f"  Mean CV Score: {row['mean_test_score']:.6f}")
-    #     print(f"  Std CV Score:  {row['std_test_score']:.6f}")
-    
-    # print("\n" + "="*70)
-    # print("BEST MODEL")
-    # print("="*70)
-    # print(f"Best Parameters: {grid_search.best_params_}")
-    # print(f"Best CV Score: {grid_search.best_score_:.6f}")
-    # print("="*70 + "\n")
-
     best_model = grid_search.best_estimator_
 
     return best_model
