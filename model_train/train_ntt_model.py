@@ -42,8 +42,8 @@ def basic_eda(df: pd.DataFrame):
         print(f"Unique values for '{col}':")
         print(df[col].unique())
         print("\n")
-    
 
+    
 # =========================
 # 2. Preprocessing
 # =========================
@@ -237,3 +237,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

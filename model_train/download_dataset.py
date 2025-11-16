@@ -1,0 +1,15 @@
+from datasets import load_dataset
+import os
+
+output_dir = os.path.join("..", "data")
+os.makedirs(output_dir, exist_ok=True)
+
+dataset_gemm = load_dataset("NYUGPUClass/GEMM_dataset")
+gemm_csv_path = os.path.join(output_dir, "gemm_dataset_train.csv")
+dataset_gemm["train"].to_csv(gemm_csv_path, index=False)
+
+dataset_ntt = load_dataset("NYUGPUClass/NTT_dataset")
+ntt_csv_path = os.path.join(output_dir, "ntt_dataset_train.csv")
+dataset_ntt["train"].to_csv(ntt_csv_path, index=False)
+
+print(f"Saving datasets to: {os.path.abspath(output_dir)}")

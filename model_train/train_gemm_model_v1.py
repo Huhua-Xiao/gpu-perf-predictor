@@ -9,6 +9,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import matplotlib.pyplot as plt
 from xgboost import XGBRegressor
 import joblib
+from sklearn.svm import SVR
 
 
 # =========================
@@ -16,7 +17,7 @@ import joblib
 # =========================
 
 def load_dataset(csv_path: str):
-    # train_csv_path = "/home/nyu_id/Gpus/gpu-perf-predictor/data/ntt_dataset_train.csv"
+    # train_csv_path = "/home/nyu_id/Gpus/gpu-perf-predictor/data/gemm_dataset_train.csv"
     print(f"Loading dataset from: {csv_path}")
     df = pd.read_csv(csv_path)
     print("Dataset loaded. Shape:", df.shape)
@@ -42,8 +43,7 @@ def basic_eda(df: pd.DataFrame):
         print(f"Unique values for '{col}':")
         print(df[col].unique())
         print("\n")
-
-
+    
 
 # =========================
 # 2. Preprocessing
@@ -57,32 +57,36 @@ def preprocess(df: pd.DataFrame):
 
     # 2. Separate features and target variable
     columns_to_drop = [
-        # target & time-based metrics related to the time_ms_mean
-        # might casue the data leakage
-        # or some features don't need
-        "time_ms_mean",
-        "time_ms_median",
-        "time_ms_p95",
-        "time_ms_stddev",
-        "modops_per_sec",
+        'device_id', # Constant column
+        'driver_version', # Constant column
+        'precision', # Constant categorical column
+        'algorithm', # Constant categorical column
+        'time_ms_mean','time_ms_median', 'time_ms_p95', 'time_ms_stddev', # Performance metrics leading to data leakage
+        "gflops_mean",
+        "gflops_median",
+        "gflops_p95",
+        "gops_over_peak_mean",
         "memory_throughput_GBps",
         "memory_efficiency_pct",
+        "compute_efficiency_pct",
+        "peak_flops_fp32_GFLOPs_actual",
+        "compute_efficiency_actual_pct",
         "actual_clock_mhz",
         "actual_mem_clock_mhz",
         "temperature_c",
         "power_watts",
-        "device_id",        # ID, not a real feature
-        "modulus",          # fixed 998244353 in this generator
-        "primitive_root",   # fixed 3 in this generator
-        "repeats",          # measurement protocol, not workload
-        "inner_iters",      # same as above
-        "algorithm",        # constant "Custom-NTT" in this dataset
-        "seed",             # random seed, just noise
-        "gpu_name",         # avoid overfitting to specific GPU names
+        "gpu_name", 
+        "cuda_runtime_version",
+        "repeats",
+        "inner_iters",
+        "seed",
+        "tile_width",
+        "block_x",
+        "block_y",
+        "shared_mem_per_block",
     ]
 
     X = df.drop(columns=columns_to_drop, errors="ignore")
-
     print("Features (X) and target (y) separated successfully.")
     print(f"Shape of X: {X.shape}")
     print(f"Shape of y: {y.shape}")
@@ -145,6 +149,7 @@ def train_xgb(X_train, y_train):
         "colsample_bytree": [0.7, 0.8],
     }
 
+
     print("\n=== XGBoost Regressor model initialized and parameter grid defined ===")
 
     grid_search = GridSearchCV(
@@ -191,12 +196,10 @@ def plot_feature_importance(model, feature_names, output_dir):
     plt.ylabel("Feature")
     plt.title("XGBoost Feature Importances (Top 25)")
     plt.tight_layout()
-    out_path = os.path.join(output_dir, "xgb_feature_importances_ntt_v1.png")
+    out_path = os.path.join(output_dir, "xgb_feature_importances_gemm_v1.png")
     plt.savefig(out_path)
     plt.close()
     print(f"Feature importance plot saved to: {out_path}\n")
-
-
 
 def evaluate_model(model, X_test, y_test, output_dir, name="XGBoost"):
 
@@ -240,14 +243,15 @@ def evaluate_model(model, X_test, y_test, output_dir, name="XGBoost"):
     plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2, label='Perfect Prediction')
     plt.xlabel('Actual Time (ms)')
     plt.ylabel('Predicted Time (ms)')
-    plt.title(f'{name}: Predicted vs Actual (NTT)')
+    plt.title(f'{name}: Predicted vs Actual (GEMM)')
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    output_path_f1 = os.path.join(output_dir, 'predictions_vs_actual_ntt.png')
+    output_path_f1 = os.path.join(output_dir, 'predictions_vs_actual_gemm.png')
     plt.savefig(output_path_f1, dpi=300)
     plt.close()
     print(f"Saved to: {output_path_f1}\n")
+
 
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
     
@@ -278,11 +282,11 @@ def evaluate_model(model, X_test, y_test, output_dir, name="XGBoost"):
     axes[1, 1].grid(True, alpha=0.3)
     
     plt.tight_layout()
-    output_path_f2 = os.path.join(output_dir, 'residual_analysis_ntt.png')
+    output_path_f2 = os.path.join(output_dir, 'residual_analysis.png')
     plt.savefig(output_path_f2, dpi=300)
     plt.close()
-    print(f"Saved to: {output_path_f2}\n")
-
+    print(f"Saved: {output_path_f2}\n")
+    
     print(f"\n=== Error Analysis by Prediction Range ===")
     percentiles = [0, 25, 50, 75, 100]
     bins = np.percentile(y_test, percentiles)
@@ -297,7 +301,7 @@ def evaluate_model(model, X_test, y_test, output_dir, name="XGBoost"):
             range_mape = np.mean(rel_errors[mask])
             range_r2 = r2_score(y_test[mask], y_pred[mask])
             print(f"Range [{bins[i]:.4f}, {bins[i+1]:.4f}] (n={mask.sum()}): MAE={range_mae:.4f}, MAPE={range_mape:.2f}%, R²={range_r2:.4f}")
-
+    
     results_df = pd.DataFrame({
         'actual': y_test,
         'predicted': y_pred,
@@ -306,31 +310,28 @@ def evaluate_model(model, X_test, y_test, output_dir, name="XGBoost"):
         'rel_error_pct': rel_errors
     })
     results_df = results_df.sort_values('abs_error', ascending=False)
-    csv_output_path = os.path.join(output_dir, 'prediction_results_ntt.csv')
+    csv_output_path = os.path.join(output_dir, 'prediction_results_gemm.csv')
     results_df.to_csv(csv_output_path, index=False)
-    print(f"Saved CSV to: {csv_output_path}\n")
+    print(f"\nSaved CSV to: {csv_output_path}\n")
     
     print(f"\n=== Top 10 Worst Predictions ===")
     print(results_df.head(10).to_string(index=False))
-
-
 # =========================
 # 5. Main entry point
 # =========================
 
 def main():
-    output_dir = "output_NTT"
+    output_dir = "output_GEMM"
     os.makedirs(output_dir, exist_ok=True)
     print(f"\nAll files and output will be saved to {output_dir}\n")
 
     # Path to your CSV on CIMS
     # Remind: replace hx2487 to your netid
-    csv_path = "/home/hx2487/Gpus/gpu-perf-predictor/data/ntt_dataset_train.csv"
+    csv_path = "/home/hx2487/Gpus/gpu-perf-predictor/data/gemm_dataset_train.csv"
 
     # 1. Load data and run simple EDA (printed only)
     df = load_dataset(csv_path)
     basic_eda(df)
-
 
     # 2. Preprocess (cleaning, encoding, scaling)
     X, y = preprocess(df)
@@ -353,7 +354,7 @@ def main():
     evaluate_model(best_xgb_model, X_test, y_test, output_dir, name="XGBoost")
 
     # 7. Save model to disk
-    model_filename =os.path.join(output_dir, "xgboost_gpu_perf_predictor_model_ntt_v1.joblib")
+    model_filename =os.path.join(output_dir, "xgboost_gpu_perf_predictor_model_gemm_v1.joblib")
     joblib.dump(best_xgb_model, model_filename)
     print(f"\nSaved trained XGBoost model to: {model_filename}")
 
