@@ -16,4 +16,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # 5. Run training
-python train_tnn_model.py
+python train_ntt_model.py
+python train_ntt_model_v1.py
+python train_gemm_model.py
+
