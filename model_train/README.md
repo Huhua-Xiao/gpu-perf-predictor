@@ -2,6 +2,9 @@
 
 This directory contains the training scripts and utilities for GEMM and NTT models.
 
+output_GEMM stores the 10k GEMM results, and output_GEMM_20k stores the 20k GEMM results. 
+output_NTT stores the 10k NTT results, and output_NTT_25k stores the 25k NTT results. 
+
 ##  Quick Start
 
 ### 1. Environment Setup
