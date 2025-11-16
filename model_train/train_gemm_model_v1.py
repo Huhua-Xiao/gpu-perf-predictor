@@ -172,6 +172,35 @@ def train_xgb(X_train, y_train):
 
     return best_model
 
+def train_svm(X_train, y_train):
+    # 1. Define an instance of SVR
+    # SVR does not have a random_state parameter, so we will omit it.
+    svr_model = SVR(kernel="rbf")
+
+    # 2. Define a dictionary named param_grid for hyperparameter tuning
+    param_grid = {
+        'C': [0.1, 1, 10],
+        'epsilon': [0.01, 0.1, 0.2],
+        'gamma': ['scale', 'auto', 0.1, 1]
+    }
+
+    print("SVR model initialized and parameter grid defined.")
+    # Instantiate GridSearchCV for SVR
+    grid_search_svr = GridSearchCV(estimator=svr_model, param_grid=param_grid,
+                            scoring='neg_mean_squared_error', 
+                            cv=3, verbose=1, n_jobs=-1, return_train_score=True)
+
+    print("Starting GridSearchCV fit for SVR model...")
+    grid_search_svr.fit(X_train, y_train)
+    print("GridSearchCV fit for SVR model complete.")
+
+    print("Best parameters for SVR found: ", grid_search_svr.best_params_)
+    print("Best cross-validation score (negative mean squared error) for SVR: ", grid_search_svr.best_score_)
+
+    best_model = grid_search_svr.best_estimator_
+
+    return best_model
+
 # =========================
 # 4. Evaluation
 # =========================
@@ -201,11 +230,12 @@ def plot_feature_importance(model, feature_names, output_dir):
     plt.close()
     print(f"Feature importance plot saved to: {out_path}\n")
 
-def evaluate_model(model, X_test, y_test, output_dir, name="XGBoost"):
+def evaluate_model(model, X_test, y_test, output_dir, name):
 
     print(f"\n=== Evaluation for {name} on test set ===")
     y_pred = model.predict(X_test)
-
+    base_name = "xgboost" if name.lower() == "xgboost" else "svm"
+    
     mse = mean_squared_error(y_test, y_pred)
     rmse = np.sqrt(mse)
     mae = mean_absolute_error(y_test, y_pred)
@@ -247,7 +277,7 @@ def evaluate_model(model, X_test, y_test, output_dir, name="XGBoost"):
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    output_path_f1 = os.path.join(output_dir, 'predictions_vs_actual_gemm.png')
+    output_path_f1 = os.path.join(output_dir, f'predictions_vs_actual_gemm_{base_name}.png')
     plt.savefig(output_path_f1, dpi=300)
     plt.close()
     print(f"Saved to: {output_path_f1}\n")
@@ -282,7 +312,7 @@ def evaluate_model(model, X_test, y_test, output_dir, name="XGBoost"):
     axes[1, 1].grid(True, alpha=0.3)
     
     plt.tight_layout()
-    output_path_f2 = os.path.join(output_dir, 'residual_analysis.png')
+    output_path_f2 = os.path.join(output_dir, f'residual_analysis_{base_name}.png')
     plt.savefig(output_path_f2, dpi=300)
     plt.close()
     print(f"Saved: {output_path_f2}\n")
@@ -310,7 +340,7 @@ def evaluate_model(model, X_test, y_test, output_dir, name="XGBoost"):
         'rel_error_pct': rel_errors
     })
     results_df = results_df.sort_values('abs_error', ascending=False)
-    csv_output_path = os.path.join(output_dir, 'prediction_results_gemm.csv')
+    csv_output_path = os.path.join(output_dir, f'prediction_results_gemm_{base_name}.csv')
     results_df.to_csv(csv_output_path, index=False)
     print(f"\nSaved CSV to: {csv_output_path}\n")
     
@@ -350,13 +380,24 @@ def main():
     # 5. Plot feature importances (optional but useful for report)
     plot_feature_importance(best_xgb_model, X_train.columns, output_dir)
 
-    # 6. Evaluate on test set
+    # 6. Evaluate XGBoost on test set
     evaluate_model(best_xgb_model, X_test, y_test, output_dir, name="XGBoost")
 
-    # 7. Save model to disk
+    # 7. Save XGBoost model to disk
     model_filename =os.path.join(output_dir, "xgboost_gpu_perf_predictor_model_gemm_v1.joblib")
     joblib.dump(best_xgb_model, model_filename)
     print(f"\nSaved trained XGBoost model to: {model_filename}")
+
+    # 8. Train SVM regression model (SVR)
+    best_svr_model = train_svm(X_train, y_train)
+
+    # 9. Evaluate SVM on test set
+    evaluate_model(best_svr_model, X_test, y_test, output_dir, name="SVR")
+
+    # 10. Save SVR model
+    svr_model_filename = os.path.join(output_dir, "svr_gpu_perf_predictor_model_gemm_v1.joblib")
+    joblib.dump(best_svr_model, svr_model_filename)
+    print(f"Saved trained SVR model to: {svr_model_filename}")
 
     print("\n=== Done ===")
 

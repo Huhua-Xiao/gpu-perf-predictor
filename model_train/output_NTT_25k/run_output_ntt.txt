@@ -1,0 +1,254 @@
+
+All files and output will be saved to output_NTT
+
+Loading dataset from: /home/hx2487/Gpus/gpu-perf-predictor/data/ntt_dataset_train.csv
+Dataset loaded. Shape: (25001, 36)
+
+=== DataFrame Overview ===
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 25001 entries, 0 to 25000
+Data columns (total 36 columns):
+ #   Column                      Non-Null Count  Dtype  
+---  ------                      --------------  -----  
+ 0   gpu_name                    25001 non-null  object 
+ 1   device_id                   25001 non-null  int64  
+ 2   cc_major                    25001 non-null  int64  
+ 3   cc_minor                    25001 non-null  int64  
+ 4   sm_count                    25001 non-null  int64  
+ 5   l2_size_bytes               25001 non-null  int64  
+ 6   shared_mem_per_sm           25001 non-null  int64  
+ 7   total_global_mem            25001 non-null  int64  
+ 8   mem_bandwidth_GBps_est      25001 non-null  float64
+ 9   peak_flops_fp32_GFLOPs_est  25001 non-null  float64
+ 10  driver_version              25001 non-null  int64  
+ 11  cuda_runtime_version        25001 non-null  int64  
+ 12  max_threads_per_sm          25001 non-null  int64  
+ 13  max_threads_per_block       25001 non-null  int64  
+ 14  warp_size                   25001 non-null  int64  
+ 15  N                           25001 non-null  int64  
+ 16  modulus                     25001 non-null  int64  
+ 17  primitive_root              25001 non-null  int64  
+ 18  repeats                     25001 non-null  int64  
+ 19  inner_iters                 25001 non-null  int64  
+ 20  algorithm                   25001 non-null  object 
+ 21  seed                        25001 non-null  int64  
+ 22  time_ms_mean                25001 non-null  float64
+ 23  time_ms_median              25001 non-null  float64
+ 24  time_ms_p95                 25001 non-null  float64
+ 25  time_ms_stddev              25001 non-null  float64
+ 26  actual_clock_mhz            25001 non-null  int64  
+ 27  actual_mem_clock_mhz        25001 non-null  int64  
+ 28  temperature_c               25001 non-null  float64
+ 29  power_watts                 25001 non-null  float64
+ 30  butterflies_total           25001 non-null  int64  
+ 31  modops_total                25001 non-null  int64  
+ 32  modops_per_sec              25001 non-null  float64
+ 33  bytes_total_theoretical     25001 non-null  int64  
+ 34  memory_throughput_GBps      25001 non-null  float64
+ 35  memory_efficiency_pct       25001 non-null  float64
+dtypes: float64(11), int64(23), object(2)
+memory usage: 6.9+ MB
+None
+
+=== Descriptive statistics for numerical columns ===
+          device_id  ...  memory_efficiency_pct
+count  25001.000000  ...           25001.000000
+mean       0.800008  ...              36.535469
+std        0.400002  ...              22.031371
+min        0.000000  ...               0.042000
+25%        1.000000  ...              23.437000
+50%        1.000000  ...              32.836000
+75%        1.000000  ...              48.054000
+max        1.000000  ...             106.156000
+
+[8 rows x 34 columns]
+
+=== Missing values in each column ===
+gpu_name                      0
+device_id                     0
+cc_major                      0
+cc_minor                      0
+sm_count                      0
+l2_size_bytes                 0
+shared_mem_per_sm             0
+total_global_mem              0
+mem_bandwidth_GBps_est        0
+peak_flops_fp32_GFLOPs_est    0
+driver_version                0
+cuda_runtime_version          0
+max_threads_per_sm            0
+max_threads_per_block         0
+warp_size                     0
+N                             0
+modulus                       0
+primitive_root                0
+repeats                       0
+inner_iters                   0
+algorithm                     0
+seed                          0
+time_ms_mean                  0
+time_ms_median                0
+time_ms_p95                   0
+time_ms_stddev                0
+actual_clock_mhz              0
+actual_mem_clock_mhz          0
+temperature_c                 0
+power_watts                   0
+butterflies_total             0
+modops_total                  0
+modops_per_sec                0
+bytes_total_theoretical       0
+memory_throughput_GBps        0
+memory_efficiency_pct         0
+dtype: int64
+
+=== First 5 rows of the DataFrame ===
+                     gpu_name  ...  memory_efficiency_pct
+0  NVIDIA GeForce RTX 2080 Ti  ...                 71.221
+1  NVIDIA GeForce RTX 2080 Ti  ...                 32.843
+2  NVIDIA GeForce RTX 2080 Ti  ...                 63.942
+3  NVIDIA GeForce RTX 2080 Ti  ...                 32.842
+4  NVIDIA GeForce RTX 2080 Ti  ...                 43.467
+
+[5 rows x 36 columns]
+
+=== Unique Values ===
+Unique values for 'gpu_name':
+['NVIDIA GeForce RTX 2080 Ti' 'NVIDIA TITAN V'
+ 'NVIDIA GeForce GTX TITAN X' 'NVIDIA GeForce RTX 4070']
+
+
+Unique values for 'algorithm':
+['Custom-NTT']
+
+
+Features (X) and target (y) separated successfully.
+Shape of X: (25001, 17)
+Shape of y: (25001,)
+
+ Numerical columns in X with missing values:
+[]
+Imputing missing numerical values with median...
+Missing values in numerical columns after imputation:
+Series([], dtype: float64)
+
+Numeric columns to scale (standardization):
+['cc_major', 'cc_minor', 'sm_count', 'l2_size_bytes', 'shared_mem_per_sm', 'total_global_mem', 'mem_bandwidth_GBps_est', 'peak_flops_fp32_GFLOPs_est', 'driver_version', 'cuda_runtime_version', 'max_threads_per_sm', 'max_threads_per_block', 'warp_size', 'N', 'butterflies_total', 'modops_total', 'bytes_total_theoretical']
+Standardization complete.
+Data split into training and testing sets successfully.
+X_train shape: (20000, 17)
+X_test shape: (5001, 17)
+y_train shape: (20000,)
+y_test shape: (5001,)
+
+=== XGBoost Regressor model initialized and parameter grid defined ===
+Starting GridSearchCV fit...
+Fitting 3 folds for each of 72 candidates, totalling 216 fits
+GridSearchCV fit complete.
+Best parameters found:  {'colsample_bytree': 0.7, 'learning_rate': 0.2, 'max_depth': 5, 'n_estimators': 100, 'subsample': 0.7}
+Best cross-validation score (negative mean squared error):  -13.579441763875105
+Feature importance plot saved to: output_NTT/xgb_feature_importances_ntt_v1.png
+
+
+=== Evaluation for XGBoost on test set ===
+Model Evaluation on Test Set:
+Mean Squared Error (MSE): 13.4916
+Root Mean Squared Error (RMSE): 3.6731
+Mean Absolute Error (MAE): 0.8624
+R-squared (R2): 0.8110
+
+=== Error Analysis ===
+Mean Absolute Percentage Error (MAPE): 196.39%
+Symmetric MAPE (SMAPE): 16.46%
+Weighted MAPE (WMAPE): 18.82%
+Root Mean Squared Log Error (RMSLE): 0.416089
+Median Absolute Error: 0.0017 ms
+90th Percentile Absolute Error: 3.6220 ms
+95th Percentile Absolute Error: 4.4777 ms
+Max Absolute Error: 75.5368 ms
+
+=== Prediction Statistics ===
+Actual - Mean: 4.5828, Std: 8.4504, Range: [0.0539, 103.8591]
+Predicted - Mean: 4.5756, Std: 7.5404, Range: [0.0548, 39.0922]
+Saved to: output_NTT/predictions_vs_actual_ntt_xgboost.png
+
+Saved to: output_NTT/residual_analysis_ntt_xgboost.png
+
+
+=== Error Analysis by Prediction Range ===
+Range [0.0539, 0.1077] (n=1250): MAE=0.3832, MAPE=531.99%, R²=-8774.4075
+Range [0.1077, 0.4705] (n=1250): MAE=0.4464, MAPE=209.25%, R²=-152.3505
+Range [0.4705, 4.6816] (n=1250): MAE=0.5316, MAPE=33.48%, R²=-0.1020
+Range [4.6816, 103.8591] (n=1251): MAE=2.0876, MAPE=10.99%, R²=0.6134
+Saved CSV to: output_NTT/prediction_results_ntt_xgboost.csv
+
+
+=== Top 10 Worst Predictions ===
+    actual  predicted     error  abs_error  rel_error_pct
+103.859120  28.322304 75.536816  75.536816      72.730075
+ 84.313165  28.322304 55.990861  55.990861      66.408207
+ 84.310518  28.322304 55.988214  55.988214      66.407152
+ 84.309980  28.322304 55.987676  55.987676      66.406938
+ 84.305168  28.322304 55.982864  55.982864      66.405021
+ 84.296655  28.322304 55.974351  55.974351      66.401628
+ 84.253354  28.322304 55.931050  55.931050      66.384360
+ 84.237482  28.322304 55.915178  55.915178      66.378027
+ 78.183781  28.322304 49.861477  49.861477      63.774707
+ 78.146292  28.322304 49.823988  49.823988      63.757329
+
+Saved trained XGBoost model to: output_NTT/xgboost_gpu_perf_predictor_model_ntt_v1.joblib
+SVR model initialized and parameter grid defined.
+Starting GridSearchCV fit for SVR model...
+Fitting 3 folds for each of 36 candidates, totalling 108 fits
+GridSearchCV fit for SVR model complete.
+Best parameters for SVR found:  {'C': 10, 'epsilon': 0.1, 'gamma': 0.1}
+Best cross-validation score (negative mean squared error) for SVR:  -13.545504807946129
+
+=== Evaluation for SVR on test set ===
+Model Evaluation on Test Set:
+Mean Squared Error (MSE): 13.4929
+Root Mean Squared Error (RMSE): 3.6733
+Mean Absolute Error (MAE): 0.8879
+R-squared (R2): 0.8110
+
+=== Error Analysis ===
+Mean Absolute Percentage Error (MAPE): 225.91%
+Symmetric MAPE (SMAPE): 39.56%
+Weighted MAPE (WMAPE): 19.38%
+Root Mean Squared Log Error (RMSLE): 0.423971
+Median Absolute Error: 0.0660 ms
+90th Percentile Absolute Error: 3.9680 ms
+95th Percentile Absolute Error: 4.2981 ms
+Max Absolute Error: 75.4610 ms
+
+=== Prediction Statistics ===
+Actual - Mean: 4.5828, Std: 8.4504, Range: [0.0539, 103.8591]
+Predicted - Mean: 4.6239, Std: 7.5582, Range: [-0.0257, 39.1200]
+Saved to: output_NTT/predictions_vs_actual_ntt_svm.png
+
+Saved to: output_NTT/residual_analysis_ntt_svm.png
+
+
+=== Error Analysis by Prediction Range ===
+Range [0.0539, 0.1077] (n=1250): MAE=0.4478, MAPE=619.26%, R²=-9953.4782
+Range [0.1077, 0.4705] (n=1250): MAE=0.5007, MAPE=236.40%, R²=-154.8617
+Range [0.4705, 4.6816] (n=1250): MAE=0.5702, MAPE=37.91%, R²=-0.3607
+Range [4.6816, 103.8591] (n=1251): MAE=2.0320, MAPE=10.27%, R²=0.6191
+Saved CSV to: output_NTT/prediction_results_ntt_svm.csv
+
+
+=== Top 10 Worst Predictions ===
+    actual  predicted     error  abs_error  rel_error_pct
+103.859120  28.398104 75.461016  75.461016      72.657092
+ 84.313165  28.398104 55.915061  55.915061      66.318304
+ 84.310518  28.398104 55.912414  55.912414      66.317246
+ 84.309980  28.398104 55.911876  55.911876      66.317031
+ 84.305168  28.398104 55.907064  55.907064      66.315109
+ 84.296655  28.398104 55.898551  55.898551      66.311707
+ 84.253354  28.398104 55.855250  55.855250      66.294393
+ 84.237482  28.398104 55.839378  55.839378      66.288043
+ 78.183781  28.398104 49.785677  49.785677      63.677755
+ 78.146292  28.398104 49.748188  49.748188      63.660331
+Saved trained SVR model to: output_NTT/svr_gpu_perf_predictor_model_ntt_v1.joblib
+
+=== Done ===

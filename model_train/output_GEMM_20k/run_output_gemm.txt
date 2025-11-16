@@ -1,0 +1,288 @@
+
+All files and output will be saved to output_GEMM
+
+Loading dataset from: /home/hx2487/Gpus/gpu-perf-predictor/data/gemm_dataset_train.csv
+Dataset loaded. Shape: (20010, 52)
+
+=== DataFrame Overview ===
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 20010 entries, 0 to 20009
+Data columns (total 52 columns):
+ #   Column                             Non-Null Count  Dtype  
+---  ------                             --------------  -----  
+ 0   gpu_name                           20010 non-null  object 
+ 1   device_id                          20010 non-null  int64  
+ 2   cc_major                           20010 non-null  int64  
+ 3   cc_minor                           20010 non-null  int64  
+ 4   sm_count                           20010 non-null  int64  
+ 5   l2_size_bytes                      20010 non-null  int64  
+ 6   shared_mem_per_sm                  20010 non-null  int64  
+ 7   total_global_mem                   20010 non-null  int64  
+ 8   mem_bandwidth_GBps_est             20010 non-null  float64
+ 9   peak_flops_fp32_GFLOPs_est         20010 non-null  float64
+ 10  driver_version                     20010 non-null  int64  
+ 11  cuda_runtime_version               20010 non-null  int64  
+ 12  max_threads_per_sm                 20010 non-null  int64  
+ 13  max_threads_per_block              20010 non-null  int64  
+ 14  warp_size                          20010 non-null  int64  
+ 15  M                                  20010 non-null  int64  
+ 16  N                                  20010 non-null  int64  
+ 17  K                                  20010 non-null  int64  
+ 18  precision                          20010 non-null  object 
+ 19  repeats                            20010 non-null  int64  
+ 20  inner_iters                        20010 non-null  int64  
+ 21  algorithm                          20010 non-null  object 
+ 22  seed                               20010 non-null  int64  
+ 23  tile_width                         20010 non-null  int64  
+ 24  theoretical_occupancy              20010 non-null  float64
+ 25  blocks_per_sm                      20010 non-null  int64  
+ 26  grid_x                             20010 non-null  int64  
+ 27  grid_y                             20010 non-null  int64  
+ 28  block_x                            20010 non-null  int64  
+ 29  block_y                            20010 non-null  int64  
+ 30  registers_per_thread               20010 non-null  int64  
+ 31  shared_mem_per_block               20010 non-null  int64  
+ 32  time_ms_mean                       20010 non-null  float64
+ 33  time_ms_median                     20010 non-null  float64
+ 34  time_ms_p95                        20010 non-null  float64
+ 35  time_ms_stddev                     20010 non-null  float64
+ 36  gflops_mean                        20010 non-null  float64
+ 37  gflops_median                      20010 non-null  float64
+ 38  gflops_p95                         20010 non-null  float64
+ 39  actual_clock_mhz                   20010 non-null  int64  
+ 40  actual_mem_clock_mhz               20010 non-null  int64  
+ 41  temperature_c                      20010 non-null  float64
+ 42  power_watts                        20010 non-null  float64
+ 43  ops_total                          20010 non-null  int64  
+ 44  io_bytes_theoretical               20010 non-null  int64  
+ 45  gops_over_peak_mean                20010 non-null  float64
+ 46  arithmetic_intensity_ops_per_byte  20010 non-null  float64
+ 47  memory_throughput_GBps             20010 non-null  float64
+ 48  memory_efficiency_pct              20010 non-null  float64
+ 49  compute_efficiency_pct             20010 non-null  float64
+ 50  peak_flops_fp32_GFLOPs_actual      20010 non-null  float64
+ 51  compute_efficiency_actual_pct      20010 non-null  float64
+dtypes: float64(19), int64(30), object(3)
+memory usage: 7.9+ MB
+None
+
+=== Descriptive statistics for numerical columns ===
+          device_id  ...  compute_efficiency_actual_pct
+count  20010.000000  ...                   20010.000000
+mean       0.344828  ...                      59.739398
+std        0.475324  ...                      26.717910
+min        0.000000  ...                       0.007000
+25%        0.000000  ...                      42.809000
+50%        0.000000  ...                      64.300000
+75%        1.000000  ...                      82.641250
+max        1.000000  ...                      98.606000
+
+[8 rows x 49 columns]
+
+=== Missing values in each column ===
+gpu_name                             0
+device_id                            0
+cc_major                             0
+cc_minor                             0
+sm_count                             0
+l2_size_bytes                        0
+shared_mem_per_sm                    0
+total_global_mem                     0
+mem_bandwidth_GBps_est               0
+peak_flops_fp32_GFLOPs_est           0
+driver_version                       0
+cuda_runtime_version                 0
+max_threads_per_sm                   0
+max_threads_per_block                0
+warp_size                            0
+M                                    0
+N                                    0
+K                                    0
+precision                            0
+repeats                              0
+inner_iters                          0
+algorithm                            0
+seed                                 0
+tile_width                           0
+theoretical_occupancy                0
+blocks_per_sm                        0
+grid_x                               0
+grid_y                               0
+block_x                              0
+block_y                              0
+registers_per_thread                 0
+shared_mem_per_block                 0
+time_ms_mean                         0
+time_ms_median                       0
+time_ms_p95                          0
+time_ms_stddev                       0
+gflops_mean                          0
+gflops_median                        0
+gflops_p95                           0
+actual_clock_mhz                     0
+actual_mem_clock_mhz                 0
+temperature_c                        0
+power_watts                          0
+ops_total                            0
+io_bytes_theoretical                 0
+gops_over_peak_mean                  0
+arithmetic_intensity_ops_per_byte    0
+memory_throughput_GBps               0
+memory_efficiency_pct                0
+compute_efficiency_pct               0
+peak_flops_fp32_GFLOPs_actual        0
+compute_efficiency_actual_pct        0
+dtype: int64
+
+=== First 5 rows of the DataFrame ===
+                     gpu_name  ...  compute_efficiency_actual_pct
+0  NVIDIA GeForce RTX 2080 Ti  ...                         88.869
+1  NVIDIA GeForce RTX 2080 Ti  ...                         93.648
+2  NVIDIA GeForce RTX 2080 Ti  ...                         42.812
+3  NVIDIA GeForce RTX 2080 Ti  ...                         31.315
+4  NVIDIA GeForce RTX 2080 Ti  ...                         58.144
+
+[5 rows x 52 columns]
+
+=== Unique Values ===
+Unique values for 'gpu_name':
+['NVIDIA GeForce RTX 2080 Ti' 'NVIDIA TITAN V'
+ 'NVIDIA GeForce GTX TITAN X' 'NVIDIA GeForce RTX 4070']
+
+
+Unique values for 'algorithm':
+['cuBLAS']
+
+
+Features (X) and target (y) separated successfully.
+Shape of X: (20010, 22)
+Shape of y: (20010,)
+
+ Numerical columns in X with missing values:
+[]
+Imputing missing numerical values with median...
+Missing values in numerical columns after imputation:
+Series([], dtype: float64)
+
+Numeric columns to scale (standardization):
+['cc_major', 'cc_minor', 'sm_count', 'l2_size_bytes', 'shared_mem_per_sm', 'total_global_mem', 'mem_bandwidth_GBps_est', 'peak_flops_fp32_GFLOPs_est', 'max_threads_per_sm', 'max_threads_per_block', 'warp_size', 'M', 'N', 'K', 'blocks_per_sm', 'grid_x', 'grid_y', 'registers_per_thread', 'ops_total', 'io_bytes_theoretical', 'arithmetic_intensity_ops_per_byte']
+Standardization complete.
+Data split into training and testing sets successfully.
+X_train shape: (16008, 22)
+X_test shape: (4002, 22)
+y_train shape: (16008,)
+y_test shape: (4002,)
+
+=== XGBoost Regressor model initialized and parameter grid defined ===
+Starting GridSearchCV fit...
+Fitting 3 folds for each of 72 candidates, totalling 216 fits
+GridSearchCV fit complete.
+Best parameters found:  {'colsample_bytree': 0.7, 'learning_rate': 0.05, 'max_depth': 5, 'n_estimators': 100, 'subsample': 0.8}
+Best cross-validation score (negative mean squared error):  -2.2337021271174184
+Feature importance plot saved to: output_GEMM/xgb_feature_importances_gemm_v1.png
+
+
+=== Evaluation for XGBoost on test set ===
+Model Evaluation on Test Set:
+Mean Squared Error (MSE): 3.6128
+Root Mean Squared Error (RMSE): 1.9007
+Mean Absolute Error (MAE): 0.6256
+R-squared (R2): 0.9739
+
+=== Error Analysis ===
+Mean Absolute Percentage Error (MAPE): 96.16%
+Symmetric MAPE (SMAPE): 32.33%
+Weighted MAPE (WMAPE): 11.56%
+Root Mean Squared Log Error (RMSLE): 0.223578
+Median Absolute Error: 0.1649 ms
+90th Percentile Absolute Error: 1.2082 ms
+95th Percentile Absolute Error: 2.0187 ms
+Max Absolute Error: 65.3523 ms
+
+=== Prediction Statistics ===
+Actual - Mean: 5.4123, Std: 11.7681, Range: [0.0163, 163.3069]
+Predicted - Mean: 5.3920, Std: 11.3184, Range: [0.0572, 127.0774]
+Saved to: output_GEMM/predictions_vs_actual_gemm_xgboost.png
+
+Saved: output_GEMM/residual_analysis_xgboost.png
+
+
+=== Error Analysis by Prediction Range ===
+Range [0.0163, 0.3481] (n=1001): MAE=0.2457, MAPE=313.86%, R²=-24.0238
+Range [0.3481, 1.5957] (n=1000): MAE=0.2705, MAPE=40.85%, R²=-0.7670
+Range [1.5957, 4.5143] (n=1000): MAE=0.5498, MAPE=20.98%, R²=0.0513
+Range [4.5143, 163.3069] (n=1001): MAE=1.4360, MAPE=8.83%, R²=0.9603
+
+Saved CSV to: output_GEMM/prediction_results_gemm_xgboost.csv
+
+
+=== Top 10 Worst Predictions ===
+    actual  predicted      error  abs_error  rel_error_pct
+112.722907  47.370636  65.352271  65.352271      57.976034
+163.306902 116.137482  47.169420  47.169420      28.883911
+156.710146 124.120155  32.589991  32.589991      20.796350
+ 52.515077  26.669540  25.845537  25.845537      49.215460
+145.648671 127.077377  18.571294  18.571294      12.750747
+102.855971 120.719452 -17.863481  17.863481      17.367471
+ 73.472314  58.962963  14.509351  14.509351      19.748052
+ 43.342786  56.670017 -13.327231  13.327231      30.748442
+104.392986 115.810394 -11.417408  11.417408      10.936950
+ 45.878888  34.870052  11.008836  11.008836      23.995428
+
+Saved trained XGBoost model to: output_GEMM/xgboost_gpu_perf_predictor_model_gemm_v1.joblib
+SVR model initialized and parameter grid defined.
+Starting GridSearchCV fit for SVR model...
+Fitting 3 folds for each of 36 candidates, totalling 108 fits
+GridSearchCV fit for SVR model complete.
+Best parameters for SVR found:  {'C': 10, 'epsilon': 0.2, 'gamma': 'auto'}
+Best cross-validation score (negative mean squared error) for SVR:  -2.5361874650413747
+
+=== Evaluation for SVR on test set ===
+Model Evaluation on Test Set:
+Mean Squared Error (MSE): 4.5781
+Root Mean Squared Error (RMSE): 2.1397
+Mean Absolute Error (MAE): 0.5911
+R-squared (R2): 0.9669
+
+=== Error Analysis ===
+Mean Absolute Percentage Error (MAPE): 145.30%
+Symmetric MAPE (SMAPE): 31.33%
+Weighted MAPE (WMAPE): 10.92%
+Root Mean Squared Log Error (RMSLE): 0.266584
+Median Absolute Error: 0.1337 ms
+90th Percentile Absolute Error: 1.7836 ms
+95th Percentile Absolute Error: 1.9829 ms
+Max Absolute Error: 63.2045 ms
+
+=== Prediction Statistics ===
+Actual - Mean: 5.4123, Std: 11.7681, Range: [0.0163, 163.3069]
+Predicted - Mean: 5.4143, Std: 11.0161, Range: [-0.0703, 113.9065]
+Saved to: output_GEMM/predictions_vs_actual_gemm_svm.png
+
+Saved: output_GEMM/residual_analysis_svm.png
+
+
+=== Error Analysis by Prediction Range ===
+Range [0.0163, 0.3481] (n=1001): MAE=0.3812, MAPE=510.95%, R²=-70.1692
+Range [0.3481, 1.5957] (n=1000): MAE=0.3249, MAPE=49.50%, R²=-2.2301
+Range [1.5957, 4.5143] (n=1000): MAE=0.3334, MAPE=12.40%, R²=0.5015
+Range [4.5143, 163.3069] (n=1001): MAE=1.3242, MAPE=8.13%, R²=0.9499
+
+Saved CSV to: output_GEMM/prediction_results_gemm_svm.csv
+
+
+=== Top 10 Worst Predictions ===
+    actual  predicted     error  abs_error  rel_error_pct
+112.722907  49.518448 63.204459  63.204459      56.070643
+163.306902 102.029036 61.277866  61.277866      37.523133
+156.710146 101.825142 54.885004  54.885004      35.023261
+145.648671 113.906544 31.742127  31.742127      21.793627
+ 52.515077  26.289712 26.225365  26.225365      49.938734
+ 73.472314  56.350244 17.122070  17.122070      23.304112
+ 46.747329  31.189461 15.557868  15.557868      33.280764
+ 60.053717  44.910720 15.142997  15.142997      25.215753
+ 45.878888  32.628309 13.250579  13.250579      28.881648
+ 41.720337  29.232775 12.487562  12.487562      29.931595
+Saved trained SVR model to: output_GEMM/svr_gpu_perf_predictor_model_gemm_v1.joblib
+
+=== Done ===
