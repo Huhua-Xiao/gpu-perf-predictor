@@ -170,9 +170,9 @@ Max Absolute Error: 14.3568 ms
 === Prediction Statistics ===
 Actual - Mean: 5.1184, Std: 7.9201, Range: [0.0539, 44.1281]
 Predicted - Mean: 5.1427, Std: 7.9578, Range: [0.0542, 39.0911]
-Saved to: output_NTT/predictions_vs_actual_ntt.png
+Saved to: output_NTT/predictions_vs_actual_ntt_xgboost.png
 
-Saved to: output_NTT/residual_analysis_ntt.png
+Saved to: output_NTT/residual_analysis_ntt_xgboost.png
 
 
 === Error Analysis by Prediction Range ===
@@ -180,7 +180,7 @@ Range [0.0539, 0.1256] (n=500): MAE=0.0004, MAPE=0.47%, R²=0.9989
 Range [0.1256, 3.1253] (n=500): MAE=0.0025, MAPE=0.58%, R²=0.9999
 Range [3.1253, 5.4475] (n=500): MAE=0.1544, MAPE=3.37%, R²=0.9040
 Range [5.4475, 44.1281] (n=500): MAE=0.3381, MAPE=2.57%, R²=0.9867
-Saved CSV to: output_NTT/prediction_results_ntt.csv
+Saved CSV to: output_NTT/prediction_results_ntt_xgboost.csv
 
 
 === Top 10 Worst Predictions ===
@@ -197,5 +197,58 @@ Saved CSV to: output_NTT/prediction_results_ntt.csv
  9.307320   5.070029  4.237291   4.237291      45.526432
 
 Saved trained XGBoost model to: output_NTT/xgboost_gpu_perf_predictor_model_ntt_v1.joblib
+SVR model initialized and parameter grid defined.
+Starting GridSearchCV fit for SVR model...
+Fitting 3 folds for each of 36 candidates, totalling 108 fits
+GridSearchCV fit for SVR model complete.
+Best parameters for SVR found:  {'C': 10, 'epsilon': 0.1, 'gamma': 1}
+Best cross-validation score (negative mean squared error) for SVR:  -1.8247623191352602
+
+=== Evaluation for SVR on test set ===
+Model Evaluation on Test Set:
+Mean Squared Error (MSE): 0.3172
+Root Mean Squared Error (RMSE): 0.5632
+Mean Absolute Error (MAE): 0.1181
+R-squared (R2): 0.9949
+
+=== Error Analysis ===
+Mean Absolute Percentage Error (MAPE): 29.69%
+Symmetric MAPE (SMAPE): 22.37%
+Weighted MAPE (WMAPE): 2.31%
+Root Mean Squared Log Error (RMSLE): 0.067631
+Median Absolute Error: 0.0745 ms
+90th Percentile Absolute Error: 0.0998 ms
+95th Percentile Absolute Error: 0.1002 ms
+Max Absolute Error: 15.5266 ms
+
+=== Prediction Statistics ===
+Actual - Mean: 5.1184, Std: 7.9201, Range: [0.0539, 44.1281]
+Predicted - Mean: 5.1022, Std: 7.8568, Range: [0.0665, 39.0706]
+Saved to: output_NTT/predictions_vs_actual_ntt_svm.png
+
+Saved to: output_NTT/residual_analysis_ntt_svm.png
+
+
+=== Error Analysis by Prediction Range ===
+Range [0.0539, 0.1256] (n=500): MAE=0.0665, MAPE=94.80%, R²=-11.2100
+Range [0.1256, 3.1253] (n=500): MAE=0.0627, MAPE=19.81%, R²=0.9775
+Range [3.1253, 5.4475] (n=500): MAE=0.0711, MAPE=1.72%, R²=0.9847
+Range [5.4475, 44.1281] (n=500): MAE=0.2722, MAPE=2.44%, R²=0.9868
+Saved CSV to: output_NTT/prediction_results_ntt_svm.csv
+
+
+=== Top 10 Worst Predictions ===
+   actual  predicted     error  abs_error  rel_error_pct
+44.128097  28.601464 15.526633  15.526633      35.185367
+16.796899   9.991832  6.805067   6.805067      40.513831
+15.466510   9.991832  5.474678   5.474678      35.396985
+ 9.885891   5.526336  4.359555   4.359555      44.098757
+ 9.882511   5.526336  4.356175   4.356175      44.079638
+ 8.943512   4.602713  4.340799   4.340799      48.535732
+ 8.941916   4.602713  4.339203   4.339203      48.526546
+ 8.863519   4.538493  4.325026   4.325026      48.795807
+ 8.875626   4.553240  4.322386   4.322386      48.699503
+ 9.311996   4.992824  4.319172   4.319172      46.382882
+Saved trained SVR model to: output_NTT/svr_gpu_perf_predictor_model_ntt_v1.joblib
 
 === Done ===

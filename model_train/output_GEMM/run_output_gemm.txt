@@ -202,9 +202,9 @@ Max Absolute Error: 19.0894 ms
 === Prediction Statistics ===
 Actual - Mean: 5.1735, Std: 10.4976, Range: [0.0149, 144.9418]
 Predicted - Mean: 5.1970, Std: 10.4327, Range: [0.0615, 130.6393]
-Saved to: output_GEMM/predictions_vs_actual_gemm.png
+Saved to: output_GEMM/predictions_vs_actual_gemm_xgboost.png
 
-Saved: output_GEMM/residual_analysis.png
+Saved: output_GEMM/residual_analysis_xgboost.png
 
 
 === Error Analysis by Prediction Range ===
@@ -213,7 +213,7 @@ Range [0.4574, 2.2764] (n=500): MAE=0.1274, MAPE=12.74%, R²=0.9341
 Range [2.2764, 4.6067] (n=500): MAE=0.2027, MAPE=6.39%, R²=0.5423
 Range [4.6067, 144.9418] (n=501): MAE=0.8124, MAPE=5.12%, R²=0.9878
 
-Saved CSV to: output_GEMM/prediction_results_gemm.csv
+Saved CSV to: output_GEMM/prediction_results_gemm_xgboost.csv
 
 
 === Top 10 Worst Predictions ===
@@ -230,5 +230,59 @@ Saved CSV to: output_GEMM/prediction_results_gemm.csv
  31.757299  36.687878  -4.930579   4.930579      15.525812
 
 Saved trained XGBoost model to: output_GEMM/xgboost_gpu_perf_predictor_model_gemm_v1.joblib
+SVR model initialized and parameter grid defined.
+Starting GridSearchCV fit for SVR model...
+Fitting 3 folds for each of 36 candidates, totalling 108 fits
+GridSearchCV fit for SVR model complete.
+Best parameters for SVR found:  {'C': 10, 'epsilon': 0.2, 'gamma': 'auto'}
+Best cross-validation score (negative mean squared error) for SVR:  -3.1752425231841026
+
+=== Evaluation for SVR on test set ===
+Model Evaluation on Test Set:
+Mean Squared Error (MSE): 2.0112
+Root Mean Squared Error (RMSE): 1.4182
+Mean Absolute Error (MAE): 0.2816
+R-squared (R2): 0.9817
+
+=== Error Analysis ===
+Mean Absolute Percentage Error (MAPE): 31.64%
+Symmetric MAPE (SMAPE): 18.15%
+Weighted MAPE (WMAPE): 5.44%
+Root Mean Squared Log Error (RMSLE): 0.096462
+Median Absolute Error: 0.1042 ms
+90th Percentile Absolute Error: 0.4798 ms
+95th Percentile Absolute Error: 0.8894 ms
+Max Absolute Error: 47.6926 ms
+
+=== Prediction Statistics ===
+Actual - Mean: 5.1735, Std: 10.4976, Range: [0.0149, 144.9418]
+Predicted - Mean: 5.0956, Std: 9.9014, Range: [-0.0637, 103.8190]
+Saved to: output_GEMM/predictions_vs_actual_gemm_svm.png
+
+Saved: output_GEMM/residual_analysis_svm.png
+
+
+=== Error Analysis by Prediction Range ===
+Range [0.0149, 0.4574] (n=501): MAE=0.0849, MAPE=106.70%, R²=0.2655
+Range [0.4574, 2.2764] (n=500): MAE=0.0974, MAPE=8.70%, R²=0.9533
+Range [2.2764, 4.6067] (n=500): MAE=0.2067, MAPE=6.71%, R²=0.5783
+Range [4.6067, 144.9418] (n=501): MAE=0.7369, MAPE=4.36%, R²=0.9713
+
+Saved CSV to: output_GEMM/prediction_results_gemm_svm.csv
+
+
+=== Top 10 Worst Predictions ===
+    actual  predicted     error  abs_error  rel_error_pct
+144.941826  97.249246 47.692580  47.692580      32.904636
+ 82.147738  61.449463 20.698275  20.698275      25.196403
+123.178768 103.818952 19.359816  19.359816      15.716845
+ 81.012116  65.557972 15.454144  15.454144      19.076336
+ 20.860280   8.372466 12.487814  12.487814      59.864075
+ 91.799762  83.790796  8.008966   8.008966       8.724386
+101.275697  93.738246  7.537451   7.537451       7.442507
+ 12.271835   4.890675  7.381160   7.381160      60.147161
+  7.036999   1.989998  5.047001   5.047001      71.720931
+101.721462  97.911298  3.810164   3.810164       3.745683
+Saved trained SVR model to: output_GEMM/svr_gpu_perf_predictor_model_gemm_v1.joblib
 
 === Done ===
