@@ -10,12 +10,22 @@ output_NTT stores the 10k NTT results, and output_NTT_25k stores the 25k NTT res
 
 ### 1. Environment Setup
 
-Navigate to the project directory and set up a Python virtual environment:
+Navigate to the project directory and set up a Python virtual environment. Sometimes disk space on home directory might not be sufficient. In that case use the `/scratch` directory.
+
+On your home directory:
 ```bash
 cd model_train
 python3 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+```
+
+On `/scratch`:
+```bash
+cd model_train
+python3 -m venv .venv
+source .venv/bin/activate.csh  # On Windows: .venv\Scripts\activate
+pip install -r requirements_scratch.txt
 ```
 
 ### 2. Download Dataset
