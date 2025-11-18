@@ -10,10 +10,9 @@ import matplotlib.pyplot as plt
 from xgboost import XGBRegressor
 import joblib
 from sklearn.svm import SVR
-import argparse
 
 # =========================
-# 1. Data loading and EDA
+# 1. Data loading
 # =========================
 
 def load_dataset(csv_path: str):
@@ -24,33 +23,11 @@ def load_dataset(csv_path: str):
     return df
 
 
-def basic_eda(df: pd.DataFrame):
-    print("\n=== DataFrame Overview ===")
-    print(df.info())
-
-    print("\n=== Descriptive statistics for numerical columns ===")
-    print(df.describe())
-
-    print("\n=== Missing values in each column ===")
-    print(df.isnull().sum())
-
-    print("\n=== First 5 rows of the DataFrame ===")
-    print(df.head())
-
-    print("\n=== Unique Values ===")
-    categorical_cols = ['gpu_name', 'algorithm']
-    for col in categorical_cols:
-        print(f"Unique values for '{col}':")
-        print(df[col].unique())
-        print("\n")
-
-
-
 # =========================
 # 2. Preprocessing
 # =========================
 
-def preprocess(df: pd.DataFrame):
+def preprocess(df: pd.DataFrame, scaler):
     # 1. Check if time_ms_mean in dataset
     if "time_ms_mean" not in df.columns:
         raise ValueError("Column 'time_ms_mean' not found;")
@@ -103,18 +80,7 @@ def preprocess(df: pd.DataFrame):
     print("Missing values in numerical columns after imputation:")
     print(X[missing_numerical_cols].isnull().sum())
 
-    # # 4. One-hot encode categorical columns
-    # categorical_cols_to_encode = X.select_dtypes(include=["object"]).columns.tolist()
-    # print("\nCategorical columns in X to be encoded:")
-    # print(categorical_cols_to_encode)
-
-    # if categorical_cols_to_encode:
-    #     X = pd.get_dummies(X, columns=categorical_cols_to_encode, drop_first=True)
-    #     print("Applied one-hot encoding. New X shape:", X.shape)
-    # else:
-    #     print("No categorical columns to encode.")
-
-    # 5. Standard-scale numeric features (excluding 0/1 dummy columns)
+    # 4. Standard-scale numeric features (excluding 0/1 dummy columns)
     numeric_cols_after = X.select_dtypes(include=["number"]).columns.tolist()
     non_boolean_numeric_cols = []
     for col in numeric_cols_after:
@@ -125,108 +91,15 @@ def preprocess(df: pd.DataFrame):
     print("\nNumeric columns to scale (standardization):")
     print(non_boolean_numeric_cols)
 
-    scaler = StandardScaler()
-    X[non_boolean_numeric_cols] = scaler.fit_transform(X[non_boolean_numeric_cols])
+    X[non_boolean_numeric_cols] = scaler.transform(X[non_boolean_numeric_cols])
     print("Standardization complete.")
 
-    return X, y, scaler
+    return X, y
+
 
 # =========================
-# 3. Model training (XGBoost)
+# 3. Evaluation
 # =========================
-
-def train_xgb(X_train, y_train):
-    xgb_model = XGBRegressor(random_state=42)
-
-    param_grid = {
-        "n_estimators": [100, 200],
-        "learning_rate": [0.05, 0.1, 0.2],
-        "max_depth": [3, 5, 7],
-        "subsample": [0.7, 0.8],
-        "colsample_bytree": [0.7, 0.8],
-    }
-
-    print("\n=== XGBoost Regressor model initialized and parameter grid defined ===")
-
-    grid_search = GridSearchCV(
-        estimator=xgb_model,
-        param_grid=param_grid,
-        scoring="neg_mean_squared_error",
-        cv=3,
-        verbose=1,
-        n_jobs=-1,
-        return_train_score=True
-    )
-
-    print("Starting GridSearchCV fit...")
-    grid_search.fit(X_train, y_train)
-    print("GridSearchCV fit complete.")
-    print("Best parameters found: ", grid_search.best_params_)
-    print("Best cross-validation score (negative mean squared error): ", grid_search.best_score_)
-
-    best_model = grid_search.best_estimator_
-
-    return best_model
-
-def train_svm(X_train, y_train):
-    # 1. Define an instance of SVR
-    # SVR does not have a random_state parameter, so we will omit it.
-    svr_model = SVR(kernel="rbf")
-
-    # 2. Define a dictionary named param_grid for hyperparameter tuning
-    param_grid = {
-        'C': [0.1, 1, 10],
-        'epsilon': [0.01, 0.1, 0.2],
-        'gamma': ['scale', 'auto', 0.1, 1]
-    }
-
-    print("SVR model initialized and parameter grid defined.")
-    # Instantiate GridSearchCV for SVR
-    grid_search_svr = GridSearchCV(estimator=svr_model, param_grid=param_grid,
-                            scoring='neg_mean_squared_error', 
-                            cv=3, verbose=1, n_jobs=-1, return_train_score=True)
-
-    print("Starting GridSearchCV fit for SVR model...")
-    grid_search_svr.fit(X_train, y_train)
-    print("GridSearchCV fit for SVR model complete.")
-
-    print("Best parameters for SVR found: ", grid_search_svr.best_params_)
-    print("Best cross-validation score (negative mean squared error) for SVR: ", grid_search_svr.best_score_)
-
-    best_model = grid_search_svr.best_estimator_
-
-    return best_model   
-
-# =========================
-# 4. Evaluation
-# =========================
-def plot_feature_importance(model, feature_names, output_dir):
-
-    importances = model.feature_importances_
-    
-    importance_df = pd.DataFrame({
-        "Feature": feature_names,
-        "Importance": importances
-    })
-
-    # Sort features by importance
-    importance_df = importance_df.sort_values(by='Importance', ascending=False)
-
-    top_k = min(25, len(importance_df))
-    subset = importance_df.head(top_k)
-
-    plt.figure(figsize=(10, 8))
-    plt.barh(subset["Feature"][::-1], subset["Importance"][::-1])
-    plt.xlabel("Importance")
-    plt.ylabel("Feature")
-    plt.title("XGBoost Feature Importances (Top 25)")
-    plt.tight_layout()
-    out_path = os.path.join(output_dir, "xgb_feature_importances_ntt_v1.png")
-    plt.savefig(out_path)
-    plt.close()
-    print(f"Feature importance plot saved to: {out_path}\n")
-
-
 
 def evaluate_model(model, X_test, y_test, output_dir, name):
 
@@ -345,74 +218,40 @@ def evaluate_model(model, X_test, y_test, output_dir, name):
     print(results_df.head(10).to_string(index=False))
 
 
+
 # =========================
-# 5. Main entry point
+# 4. Main entry point
 # =========================
 
 def main():
-    parser = argparse.ArgumentParser(description="GPU NTT Performance Predictor")
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        required=True,
-        help="Path to the NTT dataset CSV file"
-    )
-    args = parser.parse_args()
-    csv_path = args.dataset
-
-    output_dir = "output_NTT_20k"
+    output_dir = "output_NTT_eval_20k"
     os.makedirs(output_dir, exist_ok=True)
     print(f"\nAll files and output will be saved to {output_dir}\n")
 
-    # Path to your CSV on CIMS
-    # csv_path = "../data/ntt_dataset_train.csv"
+    csv_path = "../data/ntt_dataset_eval.csv"
+    xgb_model_path = "output_NTT_20k/xgboost_gpu_perf_predictor_model_ntt_v1.joblib"
+    svr_model_path = "output_NTT_20k/svr_gpu_perf_predictor_model_ntt_v1.joblib"
+    scaler_path = "output_NTT_20k/scaler_ntt_v1.joblib"
 
-    # 1. Load data and run simple EDA (printed only)
-    df = load_dataset(csv_path)
-    basic_eda(df)
+    df_test = load_dataset(csv_path)
 
+    df_test_4060 = df_test[df_test["gpu_name"].str.contains("4060", na=False)].copy()
 
-    # 2. Preprocess (cleaning, encoding, scaling)
-    X, y, scaler = preprocess(df)
-    scaler_path = os.path.join(output_dir, "scaler_ntt_v1.joblib")
-    joblib.dump(scaler, scaler_path)
-    print(f"Scaler saved to: {scaler_path}")
+    print("Loading scaler now")
+    scaler = joblib.load(scaler_path)
+    print(f"Scaler loaded from: {scaler_path}")
 
-    # 3. Train/test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    print("Data split into training and testing sets successfully.")
-    print(f"X_train shape: {X_train.shape}")
-    print(f"X_test shape: {X_test.shape}")
-    print(f"y_train shape: {y_train.shape}")
-    print(f"y_test shape: {y_test.shape}")
+    X_test, y_test = preprocess(df_test_4060, scaler)
 
-    # 4. Train XGBoost with GridSearchCV
-    best_xgb_model = train_xgb(X_train, y_train)
+    print("Evaluating XGBoost Model")
+    xgb_model = joblib.load(xgb_model_path)
+    evaluate_model(xgb_model, X_test, y_test, output_dir, name="XGBoost")
 
-    # 5. Plot feature importances (optional but useful for report)
-    plot_feature_importance(best_xgb_model, X_train.columns, output_dir)
-
-    # 6. Evaluate on test set
-    evaluate_model(best_xgb_model, X_test, y_test, output_dir, name="XGBoost")
-
-    # 7. Save model to disk
-    model_filename =os.path.join(output_dir, "xgboost_gpu_perf_predictor_model_ntt_v1.joblib")
-    joblib.dump(best_xgb_model, model_filename)
-    print(f"\nSaved trained XGBoost model to: {model_filename}")
-
-     # 8. Train SVM regression model (SVR)
-    best_svr_model = train_svm(X_train, y_train)
-
-    # 9. Evaluate SVM on test set
-    evaluate_model(best_svr_model, X_test, y_test, output_dir, name="SVR")
-
-    # 10. Save SVR model
-    svr_model_filename = os.path.join(output_dir, "svr_gpu_perf_predictor_model_ntt_v1.joblib")
-    joblib.dump(best_svr_model, svr_model_filename)
-    print(f"Saved trained SVR model to: {svr_model_filename}")
+    print("Evaluating SVR Model")
+    svr_model = joblib.load(svr_model_path)
+    evaluate_model(svr_model, X_test, y_test, output_dir, name="SVR")
 
     print("\n=== Done ===")
-
 
 if __name__ == "__main__":
     main()

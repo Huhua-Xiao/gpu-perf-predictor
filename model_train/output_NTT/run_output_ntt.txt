@@ -1,7 +1,7 @@
 
 All files and output will be saved to output_NTT
 
-Loading dataset from: /home/hx2487/Gpus/gpu-perf-predictor/data/ntt_dataset_train.csv
+Loading dataset from: ../data/ntt_dataset_train.csv
 Dataset loaded. Shape: (10000, 36)
 
 === DataFrame Overview ===
@@ -135,6 +135,7 @@ Series([], dtype: float64)
 Numeric columns to scale (standardization):
 ['cc_major', 'cc_minor', 'sm_count', 'l2_size_bytes', 'shared_mem_per_sm', 'total_global_mem', 'mem_bandwidth_GBps_est', 'peak_flops_fp32_GFLOPs_est', 'driver_version', 'cuda_runtime_version', 'max_threads_per_sm', 'max_threads_per_block', 'warp_size', 'N', 'butterflies_total', 'modops_total', 'bytes_total_theoretical']
 Standardization complete.
+Scaler saved to: output_NTT/scaler_ntt_v1.joblib
 Data split into training and testing sets successfully.
 X_train shape: (8000, 17)
 X_test shape: (2000, 17)

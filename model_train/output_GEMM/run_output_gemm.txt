@@ -1,7 +1,7 @@
 
 All files and output will be saved to output_GEMM
 
-Loading dataset from: /home/hx2487/Gpus/gpu-perf-predictor/data/gemm_dataset_train.csv
+Loading dataset from: ../data/gemm_dataset_train.csv
 Dataset loaded. Shape: (10010, 52)
 
 === DataFrame Overview ===
@@ -167,6 +167,7 @@ Series([], dtype: float64)
 Numeric columns to scale (standardization):
 ['cc_major', 'cc_minor', 'sm_count', 'l2_size_bytes', 'shared_mem_per_sm', 'total_global_mem', 'mem_bandwidth_GBps_est', 'peak_flops_fp32_GFLOPs_est', 'max_threads_per_sm', 'max_threads_per_block', 'warp_size', 'M', 'N', 'K', 'blocks_per_sm', 'grid_x', 'grid_y', 'registers_per_thread', 'ops_total', 'io_bytes_theoretical', 'arithmetic_intensity_ops_per_byte']
 Standardization complete.
+Scaler saved to: output_GEMM/scaler_gemm_v1.joblib
 Data split into training and testing sets successfully.
 X_train shape: (8008, 22)
 X_test shape: (2002, 22)

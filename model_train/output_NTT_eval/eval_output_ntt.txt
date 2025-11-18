@@ -1,0 +1,116 @@
+
+All files and output will be saved to output_NTT_eval
+
+Loading dataset from: ../data/ntt_dataset_eval.csv
+Dataset loaded. Shape: (500, 36)
+Loading scaler now
+Scaler loaded from: output_NTT/scaler_ntt_v1.joblib
+Features (X) and target (y) separated successfully.
+Shape of X: (200, 17)
+Shape of y: (200,)
+
+ Numerical columns in X with missing values:
+[]
+Imputing missing numerical values with median...
+Missing values in numerical columns after imputation:
+Series([], dtype: float64)
+
+Numeric columns to scale (standardization):
+['cc_major', 'cc_minor', 'sm_count', 'l2_size_bytes', 'shared_mem_per_sm', 'total_global_mem', 'mem_bandwidth_GBps_est', 'peak_flops_fp32_GFLOPs_est', 'driver_version', 'cuda_runtime_version', 'max_threads_per_sm', 'max_threads_per_block', 'warp_size', 'N', 'butterflies_total', 'modops_total', 'bytes_total_theoretical']
+Standardization complete.
+Evaluating XGBoost Model
+
+=== Evaluation for XGBoost on test set ===
+Model Evaluation on Test Set:
+Mean Squared Error (MSE): 20.0166
+Root Mean Squared Error (RMSE): 4.4740
+Mean Absolute Error (MAE): 4.4504
+R-squared (R2): 0.4855
+
+=== Error Analysis ===
+Mean Absolute Percentage Error (MAPE): 952.20%
+Symmetric MAPE (SMAPE): 135.21%
+Weighted MAPE (WMAPE): 143.49%
+Root Mean Squared Log Error (RMSLE): 1.224843
+Median Absolute Error: 4.3642 ms
+90th Percentile Absolute Error: 4.9144 ms
+95th Percentile Absolute Error: 5.4341 ms
+Max Absolute Error: 6.1877 ms
+
+=== Prediction Statistics ===
+Actual - Mean: 3.1015, Std: 6.2530, Range: [0.1746, 24.7175]
+Predicted - Mean: 7.5519, Std: 6.5845, Range: [4.5860, 30.1385]
+Saved to: output_NTT_eval/predictions_vs_actual_ntt_xgboost.png
+
+Saved to: output_NTT_eval/residual_analysis_ntt_xgboost.png
+
+
+=== Error Analysis by Prediction Range ===
+Range [0.1746, 0.2824] (n=50): MAE=4.4610, MAPE=2106.17%, R²=-21524.3765
+Range [0.2824, 0.6954] (n=50): MAE=4.4092, MAPE=1143.76%, R²=-1628.2065
+Range [0.6954, 1.3907] (n=50): MAE=4.1893, MAPE=476.43%, R²=-225.7573
+Range [1.3907, 24.7175] (n=50): MAE=4.7421, MAPE=82.42%, R²=0.6950
+Saved CSV to: output_NTT_eval/prediction_results_ntt_xgboost.csv
+
+
+=== Top 10 Worst Predictions ===
+   actual  predicted     error  abs_error  rel_error_pct
+23.950847  30.138538 -6.187691   6.187691      25.834958
+23.972073  30.138538 -6.166465   6.166465      25.723538
+23.981602  30.138538 -6.156936   6.156936      25.673582
+23.984909  30.138538 -6.153629   6.153629      25.656255
+24.048654  30.138538 -6.089884   6.089884      25.323182
+24.689119  30.138538 -5.449419   5.449419      22.072150
+24.690293  30.138538 -5.448245   5.448245      22.066346
+24.692744  30.138538 -5.445794   5.445794      22.054229
+24.693803  30.138538 -5.444735   5.444735      22.048995
+24.695174  30.138538 -5.443364   5.443364      22.042219
+Evaluating SVR Model
+
+=== Evaluation for SVR on test set ===
+Model Evaluation on Test Set:
+Mean Squared Error (MSE): 101.1679
+Root Mean Squared Error (RMSE): 10.0582
+Mean Absolute Error (MAE): 9.7742
+R-squared (R2): -1.6004
+
+=== Error Analysis ===
+Mean Absolute Percentage Error (MAPE): 2280.11%
+Symmetric MAPE (SMAPE): 154.78%
+Weighted MAPE (WMAPE): 315.15%
+Root Mean Squared Log Error (RMSLE): 1.859334
+Median Absolute Error: 10.5503 ms
+90th Percentile Absolute Error: 10.8088 ms
+95th Percentile Absolute Error: 12.9959 ms
+Max Absolute Error: 13.7253 ms
+
+=== Prediction Statistics ===
+Actual - Mean: 3.1015, Std: 6.2530, Range: [0.1746, 24.7175]
+Predicted - Mean: 10.9922, Std: 0.0000, Range: [10.9922, 10.9922]
+Saved to: output_NTT_eval/predictions_vs_actual_ntt_svm.png
+
+Saved to: output_NTT_eval/residual_analysis_ntt_svm.png
+
+
+=== Error Analysis by Prediction Range ===
+Range [0.1746, 0.2824] (n=50): MAE=10.7762, MAPE=5084.64%, R²=-125575.4491
+Range [0.2824, 0.6954] (n=50): MAE=10.5816, MAPE=2751.77%, R²=-9376.9374
+Range [0.6954, 1.3907] (n=50): MAE=10.0341, MAPE=1139.13%, R²=-1297.7387
+Range [1.3907, 24.7175] (n=50): MAE=7.7049, MAPE=144.90%, R²=-0.0004
+Saved CSV to: output_NTT_eval/prediction_results_ntt_svm.csv
+
+
+=== Top 10 Worst Predictions ===
+   actual  predicted     error  abs_error  rel_error_pct
+24.717465  10.992165 13.725300  13.725300      55.528754
+24.711152  10.992165 13.718987  13.718987      55.517393
+24.705321  10.992165 13.713156  13.713156      55.506894
+24.704973  10.992165 13.712808  13.712808      55.506267
+24.695174  10.992165 13.703009  13.703009      55.488612
+24.693803  10.992165 13.701638  13.701638      55.486141
+24.692744  10.992165 13.700579  13.700579      55.484232
+24.690293  10.992165 13.698128  13.698128      55.479813
+24.689119  10.992165 13.696954  13.696954      55.477696
+24.048654  10.992165 13.056489  13.056489      54.291976
+
+=== Done ===

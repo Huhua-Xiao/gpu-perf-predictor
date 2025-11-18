@@ -1,7 +1,7 @@
 
-All files and output will be saved to output_GEMM
+All files and output will be saved to output_GEMM_20k
 
-Loading dataset from: /home/hx2487/Gpus/gpu-perf-predictor/data/gemm_dataset_train.csv
+Loading dataset from: ../data/gemm_dataset_train_20k.csv
 Dataset loaded. Shape: (20010, 52)
 
 === DataFrame Overview ===
@@ -136,11 +136,11 @@ dtype: int64
 
 === First 5 rows of the DataFrame ===
                      gpu_name  ...  compute_efficiency_actual_pct
-0  NVIDIA GeForce RTX 2080 Ti  ...                         88.869
-1  NVIDIA GeForce RTX 2080 Ti  ...                         93.648
-2  NVIDIA GeForce RTX 2080 Ti  ...                         42.812
-3  NVIDIA GeForce RTX 2080 Ti  ...                         31.315
-4  NVIDIA GeForce RTX 2080 Ti  ...                         58.144
+0  NVIDIA GeForce RTX 2080 Ti  ...                         51.070
+1  NVIDIA GeForce RTX 2080 Ti  ...                         78.462
+2  NVIDIA GeForce RTX 2080 Ti  ...                         84.974
+3  NVIDIA GeForce RTX 2080 Ti  ...                         78.663
+4  NVIDIA GeForce RTX 2080 Ti  ...                         83.737
 
 [5 rows x 52 columns]
 
@@ -167,6 +167,7 @@ Series([], dtype: float64)
 Numeric columns to scale (standardization):
 ['cc_major', 'cc_minor', 'sm_count', 'l2_size_bytes', 'shared_mem_per_sm', 'total_global_mem', 'mem_bandwidth_GBps_est', 'peak_flops_fp32_GFLOPs_est', 'max_threads_per_sm', 'max_threads_per_block', 'warp_size', 'M', 'N', 'K', 'blocks_per_sm', 'grid_x', 'grid_y', 'registers_per_thread', 'ops_total', 'io_bytes_theoretical', 'arithmetic_intensity_ops_per_byte']
 Standardization complete.
+Scaler saved to: output_GEMM_20k/scaler_gemm_v1.joblib
 Data split into training and testing sets successfully.
 X_train shape: (16008, 22)
 X_test shape: (4002, 22)
@@ -177,112 +178,112 @@ y_test shape: (4002,)
 Starting GridSearchCV fit...
 Fitting 3 folds for each of 72 candidates, totalling 216 fits
 GridSearchCV fit complete.
-Best parameters found:  {'colsample_bytree': 0.7, 'learning_rate': 0.05, 'max_depth': 5, 'n_estimators': 100, 'subsample': 0.8}
-Best cross-validation score (negative mean squared error):  -2.2337021271174184
-Feature importance plot saved to: output_GEMM/xgb_feature_importances_gemm_v1.png
+Best parameters found:  {'colsample_bytree': 0.7, 'learning_rate': 0.05, 'max_depth': 5, 'n_estimators': 100, 'subsample': 0.7}
+Best cross-validation score (negative mean squared error):  -2.604937236448674
+Feature importance plot saved to: output_GEMM_20k/xgb_feature_importances_gemm_v1.png
 
 
 === Evaluation for XGBoost on test set ===
 Model Evaluation on Test Set:
-Mean Squared Error (MSE): 3.6128
-Root Mean Squared Error (RMSE): 1.9007
-Mean Absolute Error (MAE): 0.6256
-R-squared (R2): 0.9739
+Mean Squared Error (MSE): 2.1798
+Root Mean Squared Error (RMSE): 1.4764
+Mean Absolute Error (MAE): 0.5976
+R-squared (R2): 0.9818
 
 === Error Analysis ===
-Mean Absolute Percentage Error (MAPE): 96.16%
-Symmetric MAPE (SMAPE): 32.33%
-Weighted MAPE (WMAPE): 11.56%
-Root Mean Squared Log Error (RMSLE): 0.223578
-Median Absolute Error: 0.1649 ms
-90th Percentile Absolute Error: 1.2082 ms
-95th Percentile Absolute Error: 2.0187 ms
-Max Absolute Error: 65.3523 ms
+Mean Absolute Percentage Error (MAPE): 97.36%
+Symmetric MAPE (SMAPE): 31.88%
+Weighted MAPE (WMAPE): 11.31%
+Root Mean Squared Log Error (RMSLE): 0.220784
+Median Absolute Error: 0.1683 ms
+90th Percentile Absolute Error: 1.1588 ms
+95th Percentile Absolute Error: 1.9046 ms
+Max Absolute Error: 33.9962 ms
 
 === Prediction Statistics ===
-Actual - Mean: 5.4123, Std: 11.7681, Range: [0.0163, 163.3069]
-Predicted - Mean: 5.3920, Std: 11.3184, Range: [0.0572, 127.0774]
-Saved to: output_GEMM/predictions_vs_actual_gemm_xgboost.png
+Actual - Mean: 5.2823, Std: 10.9519, Range: [0.0145, 145.6487]
+Predicted - Mean: 5.2393, Std: 10.6298, Range: [0.0677, 136.0627]
+Saved to: output_GEMM_20k/predictions_vs_actual_gemm_xgboost.png
 
-Saved: output_GEMM/residual_analysis_xgboost.png
+Saved: output_GEMM_20k/residual_analysis_xgboost.png
 
 
 === Error Analysis by Prediction Range ===
-Range [0.0163, 0.3481] (n=1001): MAE=0.2457, MAPE=313.86%, R²=-24.0238
-Range [0.3481, 1.5957] (n=1000): MAE=0.2705, MAPE=40.85%, R²=-0.7670
-Range [1.5957, 4.5143] (n=1000): MAE=0.5498, MAPE=20.98%, R²=0.0513
-Range [4.5143, 163.3069] (n=1001): MAE=1.4360, MAPE=8.83%, R²=0.9603
+Range [0.0145, 0.3455] (n=1001): MAE=0.2399, MAPE=323.53%, R²=-22.5645
+Range [0.3455, 1.7392] (n=1000): MAE=0.2459, MAPE=35.02%, R²=-0.1684
+Range [1.7392, 4.7457] (n=1000): MAE=0.5959, MAPE=22.39%, R²=-0.0024
+Range [4.7457, 145.6487] (n=1001): MAE=1.3085, MAPE=8.36%, R²=0.9728
 
-Saved CSV to: output_GEMM/prediction_results_gemm_xgboost.csv
+Saved CSV to: output_GEMM_20k/prediction_results_gemm_xgboost.csv
 
 
 === Top 10 Worst Predictions ===
     actual  predicted      error  abs_error  rel_error_pct
-112.722907  47.370636  65.352271  65.352271      57.976034
-163.306902 116.137482  47.169420  47.169420      28.883911
-156.710146 124.120155  32.589991  32.589991      20.796350
- 52.515077  26.669540  25.845537  25.845537      49.215460
-145.648671 127.077377  18.571294  18.571294      12.750747
-102.855971 120.719452 -17.863481  17.863481      17.367471
- 73.472314  58.962963  14.509351  14.509351      19.748052
- 43.342786  56.670017 -13.327231  13.327231      30.748442
-104.392986 115.810394 -11.417408  11.417408      10.936950
- 45.878888  34.870052  11.008836  11.008836      23.995428
+ 57.507791  23.511555  33.996236  33.996236      59.115879
+ 50.197746  21.974646  28.223100  28.223100      56.223840
+ 60.240890  32.593544  27.647346  27.647346      45.894651
+ 41.027791  25.239050  15.788741  15.788741      38.483040
+ 73.472314  58.117462  15.354852  15.354852      20.898827
+ 42.137114  57.142776 -15.005662  15.005662      35.611510
+ 50.008825  36.139599  13.869226  13.869226      27.733557
+ 20.860280   8.788967  12.071313  12.071313      57.867454
+ 37.400004  25.904684  11.495320  11.495320      30.736146
+145.648671 136.062683   9.585988   9.585988       6.581583
 
-Saved trained XGBoost model to: output_GEMM/xgboost_gpu_perf_predictor_model_gemm_v1.joblib
+Saved trained XGBoost model to: output_GEMM_20k/xgboost_gpu_perf_predictor_model_gemm_v1.joblib
 SVR model initialized and parameter grid defined.
 Starting GridSearchCV fit for SVR model...
 Fitting 3 folds for each of 36 candidates, totalling 108 fits
 GridSearchCV fit for SVR model complete.
 Best parameters for SVR found:  {'C': 10, 'epsilon': 0.2, 'gamma': 'auto'}
-Best cross-validation score (negative mean squared error) for SVR:  -2.5361874650413747
+Best cross-validation score (negative mean squared error) for SVR:  -3.0865532268251292
 
 === Evaluation for SVR on test set ===
 Model Evaluation on Test Set:
-Mean Squared Error (MSE): 4.5781
-Root Mean Squared Error (RMSE): 2.1397
-Mean Absolute Error (MAE): 0.5911
-R-squared (R2): 0.9669
+Mean Squared Error (MSE): 2.9889
+Root Mean Squared Error (RMSE): 1.7288
+Mean Absolute Error (MAE): 0.5762
+R-squared (R2): 0.9751
 
 === Error Analysis ===
-Mean Absolute Percentage Error (MAPE): 145.30%
-Symmetric MAPE (SMAPE): 31.33%
-Weighted MAPE (WMAPE): 10.92%
-Root Mean Squared Log Error (RMSLE): 0.266584
-Median Absolute Error: 0.1337 ms
-90th Percentile Absolute Error: 1.7836 ms
-95th Percentile Absolute Error: 1.9829 ms
-Max Absolute Error: 63.2045 ms
+Mean Absolute Percentage Error (MAPE): 141.65%
+Symmetric MAPE (SMAPE): 30.62%
+Weighted MAPE (WMAPE): 10.91%
+Root Mean Squared Log Error (RMSLE): 0.257814
+Median Absolute Error: 0.1284 ms
+90th Percentile Absolute Error: 1.7157 ms
+95th Percentile Absolute Error: 1.9789 ms
+Max Absolute Error: 33.3858 ms
 
 === Prediction Statistics ===
-Actual - Mean: 5.4123, Std: 11.7681, Range: [0.0163, 163.3069]
-Predicted - Mean: 5.4143, Std: 11.0161, Range: [-0.0703, 113.9065]
-Saved to: output_GEMM/predictions_vs_actual_gemm_svm.png
+Actual - Mean: 5.2823, Std: 10.9519, Range: [0.0145, 145.6487]
+Predicted - Mean: 5.2406, Std: 10.3171, Range: [-0.0532, 114.0593]
+Saved to: output_GEMM_20k/predictions_vs_actual_gemm_svm.png
 
-Saved: output_GEMM/residual_analysis_svm.png
+Saved: output_GEMM_20k/residual_analysis_svm.png
 
 
 === Error Analysis by Prediction Range ===
-Range [0.0163, 0.3481] (n=1001): MAE=0.3812, MAPE=510.95%, R²=-70.1692
-Range [0.3481, 1.5957] (n=1000): MAE=0.3249, MAPE=49.50%, R²=-2.2301
-Range [1.5957, 4.5143] (n=1000): MAE=0.3334, MAPE=12.40%, R²=0.5015
-Range [4.5143, 163.3069] (n=1001): MAE=1.3242, MAPE=8.13%, R²=0.9499
+Range [0.0145, 0.3455] (n=1001): MAE=0.3571, MAPE=504.61%, R²=-61.9511
+Range [0.3455, 1.7392] (n=1000): MAE=0.2651, MAPE=39.55%, R²=-0.9421
+Range [1.7392, 4.7457] (n=1000): MAE=0.3992, MAPE=14.55%, R²=0.3436
+Range [4.7457, 145.6487] (n=1001): MAE=1.2829, MAPE=7.64%, R²=0.9623
 
-Saved CSV to: output_GEMM/prediction_results_gemm_svm.csv
+Saved CSV to: output_GEMM_20k/prediction_results_gemm_svm.csv
 
 
 === Top 10 Worst Predictions ===
     actual  predicted     error  abs_error  rel_error_pct
-112.722907  49.518448 63.204459  63.204459      56.070643
-163.306902 102.029036 61.277866  61.277866      37.523133
-156.710146 101.825142 54.885004  54.885004      35.023261
-145.648671 113.906544 31.742127  31.742127      21.793627
- 52.515077  26.289712 26.225365  26.225365      49.938734
- 73.472314  56.350244 17.122070  17.122070      23.304112
- 46.747329  31.189461 15.557868  15.557868      33.280764
- 60.053717  44.910720 15.142997  15.142997      25.215753
- 45.878888  32.628309 13.250579  13.250579      28.881648
- 41.720337  29.232775 12.487562  12.487562      29.931595
-Saved trained SVR model to: output_GEMM/svr_gpu_perf_predictor_model_gemm_v1.joblib
+ 57.507791  24.121994 33.385797  33.385797      58.054389
+144.941826 113.034845 31.906981  31.906981      22.013646
+145.648671 114.059314 31.589357  31.589357      21.688737
+ 50.197746  22.117562 28.080184  28.080184      55.939133
+ 60.240890  33.709293 26.531597  26.531597      44.042504
+ 72.954733  50.680295 22.274438  22.274438      30.531862
+ 73.472314  52.611461 20.860853  20.860853      28.392807
+ 50.008825  33.537780 16.471045  16.471045      32.936277
+ 55.094581  38.627243 16.467338  16.467338      29.889215
+ 41.027791  25.273497 15.754294  15.754294      38.399079
+Saved trained SVR model to: output_GEMM_20k/svr_gpu_perf_predictor_model_gemm_v1.joblib
 
 === Done ===
