@@ -15,4 +15,4 @@ python download_dataset.py
 python train_gemm_model_v1.py --dataset ../data/gemm_dataset_train.csv > run_output_gemm.txt
 
 # Train model for NTT
-python train_tnn_model_v1.py --dataset ../data/ntt_dataset_train.csv > run_output_ntt.txt
+python train_ntt_model_v1.py --dataset ../data/ntt_dataset_train.csv > run_output_ntt.txt
