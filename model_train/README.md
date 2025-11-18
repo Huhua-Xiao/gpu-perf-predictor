@@ -10,9 +10,10 @@ output_NTT stores the 10k NTT results, and output_NTT_25k stores the 25k NTT res
 
 ### 1. Environment Setup
 
-Navigate to the project directory and set up a Python virtual environment. Sometimes disk space on home directory might not be sufficient. In that case use the `/scratch` directory.
+Navigate to the project directory and set up a Python virtual environment. Sometimes disk space on home directory might not be sufficient.
+So, this project can be run either directly in your **home directory** or using the **/scratch** directory for larger storage (recommended on CIMS GPU machines).
 
-On your home directory:
+## **Option A: Setup in Home Directory**
 ```bash
 cd model_train
 python3 -m venv .venv
@@ -20,12 +21,35 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-On `/scratch`:
+## **Option B: Setup on /scratch**
+
 ```bash
-cd model_train
+# 1. Create your scratch directory (first-time only)
+mkdir -p /scratch/$USER
+
+# 2. Verify it exists
+ls /scratch/$USER
+
+# 3. Create a dedicated model_train directory
+mkdir -p /scratch/$USER/model_train
+
+# 4. Move into scratch directory 
+cd /scratch/$USER/model_train
+
+# 5. Create a Python virtual environment on scratch
 python3 -m venv .venv
-source .venv/bin/activate.csh  # On Windows: .venv\Scripts\activate
-pip install -r requirements_scratch.txt
+
+# 6. Activate the environment
+source .venv/bin/activate # On Windows: .venv\Scripts\activate
+
+# 7. Install dependencies from the project directory (Use your own path)
+pip install -r /home/$USER/Gpus/gpu-perf-predictor/model_train/requirements_scratch.txt
+
+# 9. Reactivate scratch environment (works from anywhere)
+source /scratch/$USER/model_train/.venv/bin/activate
+
+# Navigate back to the project codebase or open a new terminal
+cd /home/$USER/Gpus/gpu-perf-predictor/model_train
 ```
 
 ### 2. Download Dataset
@@ -45,12 +69,12 @@ python download_dataset.py
 
 #### GEMM Model
 ```bash
-python train_gemm_model_v1.py > run_output_gemm.txt
+python train_gemm_model_v1.py --dataset ../data/gemm_dataset_train.csv > run_output_gemm.txt
 ```
 
 #### NTT Model
 ```bash
-python train_tnn_model_v1.py > run_output_ntt.txt
+python train_ntt_model_v1.py --dataset ../data/ntt_dataset_train.csv > run_output_ntt.txt
 ```
 
 ## 📁 Directory Structure

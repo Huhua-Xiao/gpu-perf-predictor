@@ -133,7 +133,7 @@ def preprocess(df: pd.DataFrame):
     X[non_boolean_numeric_cols] = scaler.fit_transform(X[non_boolean_numeric_cols])
     print("Standardization complete.")
 
-    return X, y
+    return X, y, scaler
 
 # =========================
 # 3. Model training (XGBoost)
@@ -347,6 +347,7 @@ def evaluate_model(model, X_test, y_test, output_dir, name):
     
     print(f"\n=== Top 10 Worst Predictions ===")
     print(results_df.head(10).to_string(index=False))
+
 # =========================
 # 5. Main entry point
 # =========================
@@ -368,15 +369,17 @@ def main():
     print(f"\nAll files and output will be saved to {output_dir}\n")
 
     # Path to your CSV on CIMS
-    # Remind: replace hx2487 to your netid
-    # csv_path = "/home/hx2487/Gpus/gpu-perf-predictor/data/gemm_dataset_train.csv"
+    # csv_path = "../data/gemm_dataset_train.csv"
 
     # 1. Load data and run simple EDA (printed only)
     df = load_dataset(csv_path)
     basic_eda(df)
 
-    # 2. Preprocess (cleaning, encoding, scaling)
-    X, y = preprocess(df)
+    # 2. Preprocess (cleaning, encoding, scaling), and save scaler for eval
+    X, y, scaler = preprocess(df)
+    scaler_path = os.path.join(output_dir, "scaler_gemm_v1.joblib")
+    joblib.dump(scaler, scaler_path)
+    print(f"Scaler saved to: {scaler_path}")
 
     # 3. Train/test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)

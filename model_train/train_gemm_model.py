@@ -199,6 +199,8 @@ def evaluate_model(model, X_test, y_test, name="XGBoost"):
 # =========================
 
 def main():
+    # Path to your CSV on CIMS
+    # csv_path = "../data/gemm_dataset_train.csv"
     parser = argparse.ArgumentParser(description="GPU GEMM Performance Predictor")
     parser.add_argument(
         "--dataset",
@@ -208,10 +210,7 @@ def main():
     )
     args = parser.parse_args()
     csv_path = args.dataset
-
-    # Path to your CSV on CIMS
-    # Remind: replace hx2487 to your netid
-    # csv_path = "/home/hx2487/Gpus/gpu-perf-predictor/data/gemm_dataset_train.csv"
+    
 
     # 1. Load data and run simple EDA (printed only)
     df = load_dataset(csv_path)
