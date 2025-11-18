@@ -42,13 +42,15 @@ python3 -m venv .venv
 # 6. Activate the environment
 source .venv/bin/activate # On Windows: .venv\Scripts\activate
 
-# 7. Install dependencies from the project directory (Use your own path)
+# 7. Install dependencies from the project directory 
+# Note: Use your own path!!
 pip install -r /home/$USER/Gpus/gpu-perf-predictor/model_train/requirements_scratch.txt
 
-# 9. Reactivate scratch environment (works from anywhere)
+# 8. Close the current terminal then open a new terminal to reactivate scratch environment (works from anywhere)
 source /scratch/$USER/model_train/.venv/bin/activate
 
-# Navigate back to the project codebase or open a new terminal
+# Navigate to the model_train directory
+# Note: Use your own path!!
 cd /home/$USER/Gpus/gpu-perf-predictor/model_train
 ```
 
@@ -62,6 +64,11 @@ python download_dataset.py
 **Downloaded files:**
 - `gemm_dataset_train.csv`
 - `ntt_dataset_train.csv`
+- `gemm_dataset_train_20k.csv`
+- `ntt_dataset_train_20k.csv`
+- `gemm_dataset_train_30k.csv`
+- `gemm_dataset_eval.csv`
+- `ntt_dataset_eval.csv`
 >  **Dataset Source**: All datasets are available at [https://huggingface.co/NYUGPUClass](https://huggingface.co/NYUGPUClass)
 
 
@@ -81,6 +88,7 @@ python train_ntt_model_v1.py --dataset ../data/ntt_dataset_train.csv > run_outpu
 ```
 model_train/
 ├── output_GEMM/          # GEMM training logs and checkpoints
+├── output_GEMM/          # GEMM training logs and checkpoints. //todo
 ├── output_NTT/           # NTT training logs and checkpoints
 ├── run_output_gemm.txt   # GEMM training stdout
 └── run_output_ntt.txt    # NTT training stdout
