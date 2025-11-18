@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from xgboost import XGBRegressor
 import joblib
 from sklearn.svm import SVR
+import argparse
 
 
 # =========================
@@ -351,13 +352,24 @@ def evaluate_model(model, X_test, y_test, output_dir, name):
 # =========================
 
 def main():
+
+    parser = argparse.ArgumentParser(description="GPU GEMM Performance Predictor")
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=True,
+        help="Path to the GEMM dataset CSV file"
+    )
+    args = parser.parse_args()
+    csv_path = args.dataset
+
     output_dir = "output_GEMM"
     os.makedirs(output_dir, exist_ok=True)
     print(f"\nAll files and output will be saved to {output_dir}\n")
 
     # Path to your CSV on CIMS
     # Remind: replace hx2487 to your netid
-    csv_path = "/home/hx2487/Gpus/gpu-perf-predictor/data/gemm_dataset_train.csv"
+    # csv_path = "/home/hx2487/Gpus/gpu-perf-predictor/data/gemm_dataset_train.csv"
 
     # 1. Load data and run simple EDA (printed only)
     df = load_dataset(csv_path)

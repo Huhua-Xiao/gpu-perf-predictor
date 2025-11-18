@@ -9,6 +9,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import matplotlib.pyplot as plt
 from xgboost import XGBRegressor
 import joblib
+import argparse
 
 
 # =========================
@@ -199,9 +200,19 @@ def evaluate_model(model, X_test, y_test, name="XGBoost"):
 # =========================
 
 def main():
+    parser = argparse.ArgumentParser(description="GPU GEMM Performance Predictor")
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=True,
+        help="Path to the GEMM dataset CSV file"
+    )
+    args = parser.parse_args()
+    csv_path = args.dataset
+
     # Path to your CSV on CIMS
     # Remind: replace hx2487 to your netid
-    csv_path = "/home/hx2487/Gpus/gpu-perf-predictor/data/ntt_dataset_train.csv"
+    # csv_path = "/home/hx2487/Gpus/gpu-perf-predictor/data/ntt_dataset_train.csv"
 
     # 1. Load data and run simple EDA (printed only)
     df = load_dataset(csv_path)
