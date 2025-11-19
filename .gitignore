@@ -46,13 +46,15 @@ ENV/
 *.h5
 
 # Output directories (training results)
-model_train/output_*/
-!model_train/output_*/.gitkeep
+model_train/output/
+!model_train/output/.gitkeep
 
 # Data directories
-data/
+model_train/data/
 *.csv
 !requirements.txt
+!requirements_scratch.txt
+IMPROVEMENTS.md
 
 # Compiled CUDA
 *.o
