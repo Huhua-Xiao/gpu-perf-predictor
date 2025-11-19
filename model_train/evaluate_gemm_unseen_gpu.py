@@ -32,7 +32,16 @@ def preprocess(df: pd.DataFrame, scaler):
         raise ValueError("Column 'time_ms_mean' not found;")
     y = df["time_ms_mean"]
 
-    # 2. Separate features and target variable
+    # 2. Create a copy to avoid modifying the original DataFrame
+    df = df.copy()
+
+    # 3. Create combined compute capability feature from cc_major and cc_minor
+    # This handles cases like 8.0, 9.0 where cc_minor=0 which can cause issues
+    if "cc_major" in df.columns and "cc_minor" in df.columns:
+        df["compute_capability"] = df["cc_major"] + df["cc_minor"] / 10.0
+        print(f"Created compute_capability feature: {df['compute_capability'].unique()}")
+
+    # 4. Separate features and target variable
     columns_to_drop = [
         'device_id', # Constant column
         'driver_version', # Constant column
@@ -52,7 +61,7 @@ def preprocess(df: pd.DataFrame, scaler):
         "actual_mem_clock_mhz",
         "temperature_c",
         "power_watts",
-        "gpu_name", 
+        "gpu_name",
         "cuda_runtime_version",
         "repeats",
         "inner_iters",
@@ -61,6 +70,8 @@ def preprocess(df: pd.DataFrame, scaler):
         "block_x",
         "block_y",
         "shared_mem_per_block",
+        "cc_major",  # Drop in favor of combined compute_capability
+        "cc_minor",  # Drop in favor of combined compute_capability
     ]
 
     X = df.drop(columns=columns_to_drop, errors="ignore")
@@ -224,14 +235,14 @@ def evaluate_model(model, X_test, y_test, output_dir, name):
 # =========================
 
 def main():
-    output_dir = "output_GEMM_eval_20k"
+    output_dir = os.path.join("output", "output_GEMM_eval_20k")
     os.makedirs(output_dir, exist_ok=True)
     print(f"\nAll files and output will be saved to {output_dir}\n")
 
     csv_path = "data/gemm_dataset_eval.csv"
-    xgb_model_path = "output_GEMM_20k/xgboost_gpu_perf_predictor_model_gemm_v1.joblib"
-    svr_model_path = "output_GEMM_20k/svr_gpu_perf_predictor_model_gemm_v1.joblib"
-    scaler_path = "output_GEMM_20k/scaler_gemm_v1.joblib"
+    xgb_model_path = os.path.join("output", "output_GEMM_20k", "xgboost_gpu_perf_predictor_model_gemm_v1.joblib")
+    svr_model_path = os.path.join("output", "output_GEMM_20k", "svr_gpu_perf_predictor_model_gemm_v1.joblib")
+    scaler_path = os.path.join("output", "output_GEMM_20k", "scaler_gemm_v1.joblib")
 
     df_test = load_dataset(csv_path)
 

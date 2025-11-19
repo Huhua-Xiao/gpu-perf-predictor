@@ -15,6 +15,14 @@ from sklearn.preprocessing import StandardScaler
 
 def preprocess_gemm(df: pd.DataFrame, scaler):
     """Preprocess GEMM features to match training pipeline."""
+    # Create a copy to avoid modifying the original DataFrame
+    df = df.copy()
+
+    # Create combined compute capability feature from cc_major and cc_minor
+    # This handles cases like 8.0, 9.0 where cc_minor=0 which can cause issues
+    if "cc_major" in df.columns and "cc_minor" in df.columns:
+        df["compute_capability"] = df["cc_major"] + df["cc_minor"] / 10.0
+
     columns_to_drop = [
         'device_id', 'driver_version', 'precision', 'algorithm',
         'time_ms_mean','time_ms_median', 'time_ms_p95', 'time_ms_stddev',
@@ -26,6 +34,8 @@ def preprocess_gemm(df: pd.DataFrame, scaler):
         "temperature_c", "power_watts", "gpu_name", "cuda_runtime_version",
         "repeats", "inner_iters", "seed",
         "tile_width", "block_x", "block_y", "shared_mem_per_block",
+        "cc_major",  # Drop in favor of combined compute_capability
+        "cc_minor",  # Drop in favor of combined compute_capability
     ]
 
     X = df.drop(columns=columns_to_drop, errors="ignore")
@@ -54,6 +64,14 @@ def preprocess_gemm(df: pd.DataFrame, scaler):
 
 def preprocess_ntt(df: pd.DataFrame, scaler):
     """Preprocess NTT features to match training pipeline."""
+    # Create a copy to avoid modifying the original DataFrame
+    df = df.copy()
+
+    # Create combined compute capability feature from cc_major and cc_minor
+    # This handles cases like 8.0, 9.0 where cc_minor=0 which can cause issues
+    if "cc_major" in df.columns and "cc_minor" in df.columns:
+        df["compute_capability"] = df["cc_major"] + df["cc_minor"] / 10.0
+
     columns_to_drop = [
         "time_ms_mean", "time_ms_median", "time_ms_p95", "time_ms_stddev",
         "modops_per_sec", "memory_throughput_GBps", "memory_efficiency_pct",
@@ -61,6 +79,8 @@ def preprocess_ntt(df: pd.DataFrame, scaler):
         "temperature_c", "power_watts",
         "device_id", "modulus", "primitive_root",
         "repeats", "inner_iters", "algorithm", "seed", "gpu_name",
+        "cc_major",  # Drop in favor of combined compute_capability
+        "cc_minor",  # Drop in favor of combined compute_capability
     ]
 
     X = df.drop(columns=columns_to_drop, errors="ignore")
@@ -237,10 +257,10 @@ def main():
         epilog="""
 Examples:
   # Predict from CSV file
-  python predict.py --csv data/gemm_dataset_eval.csv --kernel gemm --model xgboost --model_dir output_GEMM_20k
+  python predict.py --csv data/gemm_dataset_eval.csv --kernel gemm --model xgboost --model_dir output/output_GEMM_20k
 
   # Predict from CSV with NTT model
-  python predict.py --csv data/ntt_dataset_eval.csv --kernel ntt --model svr --model_dir output_NTT_20k
+  python predict.py --csv data/ntt_dataset_eval.csv --kernel ntt --model svr --model_dir output/output_NTT_20k
         """
     )
 
