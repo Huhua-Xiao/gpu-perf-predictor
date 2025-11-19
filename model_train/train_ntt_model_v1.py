@@ -103,18 +103,7 @@ def preprocess(df: pd.DataFrame):
     print("Missing values in numerical columns after imputation:")
     print(X[missing_numerical_cols].isnull().sum())
 
-    # # 4. One-hot encode categorical columns
-    # categorical_cols_to_encode = X.select_dtypes(include=["object"]).columns.tolist()
-    # print("\nCategorical columns in X to be encoded:")
-    # print(categorical_cols_to_encode)
-
-    # if categorical_cols_to_encode:
-    #     X = pd.get_dummies(X, columns=categorical_cols_to_encode, drop_first=True)
-    #     print("Applied one-hot encoding. New X shape:", X.shape)
-    # else:
-    #     print("No categorical columns to encode.")
-
-    # 5. Standard-scale numeric features (excluding 0/1 dummy columns)
+    # 4. Standard-scale numeric features (excluding 0/1 dummy columns)
     numeric_cols_after = X.select_dtypes(include=["number"]).columns.tolist()
     non_boolean_numeric_cols = []
     for col in numeric_cols_after:
@@ -136,6 +125,7 @@ def preprocess(df: pd.DataFrame):
 # =========================
 
 def train_xgb(X_train, y_train):
+    # Add regularization parameters to prevent overfitting
     xgb_model = XGBRegressor(random_state=42)
 
     param_grid = {
@@ -144,6 +134,9 @@ def train_xgb(X_train, y_train):
         "max_depth": [3, 5, 7],
         "subsample": [0.7, 0.8],
         "colsample_bytree": [0.7, 0.8],
+        "reg_alpha": [0, 0.1, 1.0],  # L1 regularization
+        "reg_lambda": [1.0, 2.0, 5.0],  # L2 regularization (default is 1.0)
+        "min_child_weight": [1, 3, 5],  # Minimum sum of instance weight needed in a child
     }
 
     print("\n=== XGBoost Regressor model initialized and parameter grid defined ===")
@@ -357,10 +350,30 @@ def main():
         required=True,
         help="Path to the NTT dataset CSV file"
     )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default=None,
+        help="Output directory for models and results. If not specified, will auto-detect from dataset filename (e.g., output_NTT_20k for ntt_dataset_train_20k.csv)"
+    )
     args = parser.parse_args()
     csv_path = args.dataset
 
-    output_dir = "output_NTT_20k"
+    # Auto-detect output_dir from dataset filename if not specified
+    if args.output_dir is None:
+        dataset_basename = os.path.basename(csv_path)
+        if "10k" in dataset_basename or dataset_basename == "ntt_dataset_train.csv":
+            output_dir = "output_NTT_10k"
+        elif "20k" in dataset_basename:
+            output_dir = "output_NTT_20k"
+        elif "30k" in dataset_basename:
+            output_dir = "output_NTT_30k"
+        else:
+            output_dir = "output_NTT"
+        print(f"Auto-detected output directory: {output_dir}")
+    else:
+        output_dir = args.output_dir
+
     os.makedirs(output_dir, exist_ok=True)
     print(f"\nAll files and output will be saved to {output_dir}\n")
 
