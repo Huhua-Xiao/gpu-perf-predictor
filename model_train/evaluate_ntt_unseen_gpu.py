@@ -15,6 +15,7 @@ from sklearn.svm import SVR
 # 1. Data loading
 # =========================
 
+
 def load_dataset(csv_path: str):
     # train_csv_path = "/home/nyu_id/Gpus/gpu-perf-predictor/data/ntt_dataset_train.csv"
     print(f"Loading dataset from: {csv_path}")
@@ -22,10 +23,10 @@ def load_dataset(csv_path: str):
     print("Dataset loaded. Shape:", df.shape)
     return df
 
-
 # =========================
 # 2. Preprocessing
 # =========================
+
 
 def preprocess(df: pd.DataFrame, scaler):
     # 1. Check if time_ms_mean in dataset
@@ -66,7 +67,8 @@ def preprocess(df: pd.DataFrame, scaler):
     print(f"Shape of y: {y.shape}")
 
     # 3. Handle missing values in numerical columns
-    missing_numerical_cols = X.select_dtypes(include=['number']).columns[X.select_dtypes(include=['number']).isnull().any()].tolist()
+    missing_numerical_cols = X.select_dtypes(include=['number']).columns[X.select_dtypes(
+        include=['number']).isnull().any()].tolist()
 
     print("\n Numerical columns in X with missing values:")
     print(missing_numerical_cols)
@@ -75,7 +77,8 @@ def preprocess(df: pd.DataFrame, scaler):
     for col in missing_numerical_cols:
         median_val = X[col].median()
         X[col] = X[col].fillna(median_val)
-        print(f"Column '{col}': filled missing values with median={median_val}. Remaining missing: {X[col].isnull().sum()}")
+        print(
+            f"Column '{col}': filled missing values with median={median_val}. Remaining missing: {X[col].isnull().sum()}")
 
     print("Missing values in numerical columns after imputation:")
     print(X[missing_numerical_cols].isnull().sum())
@@ -96,10 +99,10 @@ def preprocess(df: pd.DataFrame, scaler):
 
     return X, y
 
-
 # =========================
 # 3. Evaluation
 # =========================
+
 
 def evaluate_model(model, X_test, y_test, output_dir, name):
 
@@ -121,68 +124,77 @@ def evaluate_model(model, X_test, y_test, output_dir, name):
     errors = y_test - y_pred
     abs_errors = np.abs(errors)
     rel_errors = np.abs(errors) / (y_test + 1e-10) * 100
-    smape = np.mean(2 * abs_errors / (np.abs(y_test) + np.abs(y_pred) + 1e-10)) * 100
+    smape = np.mean(2 * abs_errors / (np.abs(y_test) +
+                    np.abs(y_pred) + 1e-10)) * 100
     rmsle = np.sqrt(np.mean((np.log1p(y_pred) - np.log1p(y_test))**2))
     wmape = np.sum(abs_errors) / np.sum(y_test) * 100
-    
+
     print(f"\n=== Error Analysis ===")
     print(f"Mean Absolute Percentage Error (MAPE): {np.mean(rel_errors):.2f}%")
     print(f"Symmetric MAPE (SMAPE): {smape:.2f}%")
     print(f"Weighted MAPE (WMAPE): {wmape:.2f}%")
     print(f"Root Mean Squared Log Error (RMSLE): {rmsle:.6f}")
     print(f"Median Absolute Error: {np.median(abs_errors):.4f} ms")
-    print(f"90th Percentile Absolute Error: {np.percentile(abs_errors, 90):.4f} ms")
-    print(f"95th Percentile Absolute Error: {np.percentile(abs_errors, 95):.4f} ms")
+    print(
+        f"90th Percentile Absolute Error: {np.percentile(abs_errors, 90):.4f} ms")
+    print(
+        f"95th Percentile Absolute Error: {np.percentile(abs_errors, 95):.4f} ms")
     print(f"Max Absolute Error: {np.max(abs_errors):.4f} ms")
 
     print(f"\n=== Prediction Statistics ===")
-    print(f"Actual - Mean: {y_test.mean():.4f}, Std: {y_test.std():.4f}, Range: [{y_test.min():.4f}, {y_test.max():.4f}]")
-    print(f"Predicted - Mean: {y_pred.mean():.4f}, Std: {y_pred.std():.4f}, Range: [{y_pred.min():.4f}, {y_pred.max():.4f}]")
-    
+    print(
+        f"Actual - Mean: {y_test.mean():.4f}, Std: {y_test.std():.4f}, Range: [{y_test.min():.4f}, {y_test.max():.4f}]")
+    print(
+        f"Predicted - Mean: {y_pred.mean():.4f}, Std: {y_pred.std():.4f}, Range: [{y_pred.min():.4f}, {y_pred.max():.4f}]")
+
     plt.figure(figsize=(10, 8))
     plt.scatter(y_test, y_pred, alpha=0.5, s=10)
-    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2, label='Perfect Prediction')
+    plt.plot([y_test.min(), y_test.max()], [y_test.min(),
+             y_test.max()], 'r--', lw=2, label='Perfect Prediction')
     plt.xlabel('Actual Time (ms)')
     plt.ylabel('Predicted Time (ms)')
     plt.title(f'{name}: Predicted vs Actual (NTT)')
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    output_path_f1 = os.path.join(output_dir, f'predictions_vs_actual_ntt_{base_name}.png')
+    output_path_f1 = os.path.join(
+        output_dir, f'predictions_vs_actual_ntt_{base_name}.png')
     plt.savefig(output_path_f1, dpi=300)
     plt.close()
     print(f"Saved to: {output_path_f1}\n")
 
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-    
+
     axes[0, 0].hist(errors, bins=50, edgecolor='black', alpha=0.7)
     axes[0, 0].axvline(x=0, color='r', linestyle='--', linewidth=2)
     axes[0, 0].set_xlabel('Residuals (Actual - Predicted)')
     axes[0, 0].set_ylabel('Frequency')
     axes[0, 0].set_title('Distribution of Residuals')
     axes[0, 0].grid(True, alpha=0.3)
-    
+
     axes[0, 1].scatter(y_pred, errors, alpha=0.5, s=10)
     axes[0, 1].axhline(y=0, color='r', linestyle='--', linewidth=2)
     axes[0, 1].set_xlabel('Predicted Time (ms)')
     axes[0, 1].set_ylabel('Residuals')
     axes[0, 1].set_title('Residuals vs Predicted Values')
     axes[0, 1].grid(True, alpha=0.3)
-    
+
     axes[1, 0].hist(rel_errors, bins=50, edgecolor='black', alpha=0.7)
-    axes[1, 0].axvline(x=np.median(rel_errors), color='r', linestyle='--', linewidth=2, label=f'Median: {np.median(rel_errors):.2f}%')
+    axes[1, 0].axvline(x=np.median(rel_errors), color='r', linestyle='--',
+                       linewidth=2, label=f'Median: {np.median(rel_errors):.2f}%')
     axes[1, 0].set_xlabel('Absolute Percentage Error (%)')
     axes[1, 0].set_ylabel('Frequency')
     axes[1, 0].set_title('Distribution of Relative Errors')
     axes[1, 0].legend()
     axes[1, 0].grid(True, alpha=0.3)
-    
+
     stats.probplot(errors, dist="norm", plot=axes[1, 1])
     axes[1, 1].set_title('Q-Q Plot (Residuals vs Normal Distribution)')
     axes[1, 1].grid(True, alpha=0.3)
-    
+
     plt.tight_layout()
-    output_path_f2 = os.path.join(output_dir, f'residual_analysis_ntt_{base_name}.png')
+    output_path_f2 = os.path.join(
+        output_dir, f'residual_analysis_ntt_{base_name}.png')
     plt.savefig(output_path_f2, dpi=300)
     plt.close()
     print(f"Saved to: {output_path_f2}\n")
@@ -190,17 +202,18 @@ def evaluate_model(model, X_test, y_test, output_dir, name):
     print(f"\n=== Error Analysis by Prediction Range ===")
     percentiles = [0, 25, 50, 75, 100]
     bins = np.percentile(y_test, percentiles)
-    
+
     for i in range(len(bins) - 1):
         mask = (y_test >= bins[i]) & (y_test < bins[i+1])
-        if i == len(bins) - 2: 
+        if i == len(bins) - 2:
             mask = (y_test >= bins[i]) & (y_test <= bins[i+1])
-        
+
         if mask.sum() > 0:
             range_mae = np.mean(abs_errors[mask])
             range_mape = np.mean(rel_errors[mask])
             range_r2 = r2_score(y_test[mask], y_pred[mask])
-            print(f"Range [{bins[i]:.4f}, {bins[i+1]:.4f}] (n={mask.sum()}): MAE={range_mae:.4f}, MAPE={range_mape:.2f}%, R²={range_r2:.4f}")
+            print(
+                f"Range [{bins[i]:.4f}, {bins[i+1]:.4f}] (n={mask.sum()}): MAE={range_mae:.4f}, MAPE={range_mape:.2f}%, R²={range_r2:.4f}")
 
     results_df = pd.DataFrame({
         'actual': y_test,
@@ -210,13 +223,13 @@ def evaluate_model(model, X_test, y_test, output_dir, name):
         'rel_error_pct': rel_errors
     })
     results_df = results_df.sort_values('abs_error', ascending=False)
-    csv_output_path = os.path.join(output_dir, f'prediction_results_ntt_{base_name}.csv')
+    csv_output_path = os.path.join(
+        output_dir, f'prediction_results_ntt_{base_name}.csv')
     results_df.to_csv(csv_output_path, index=False)
     print(f"Saved CSV to: {csv_output_path}\n")
-    
+
     print(f"\n=== Top 10 Worst Predictions ===")
     print(results_df.head(10).to_string(index=False))
-
 
 
 # =========================
@@ -228,14 +241,15 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     print(f"\nAll files and output will be saved to {output_dir}\n")
 
-    csv_path = "../data/ntt_dataset_eval.csv"
+    csv_path = "data/ntt_dataset_eval.csv"
     xgb_model_path = "output_NTT_20k/xgboost_gpu_perf_predictor_model_ntt_v1.joblib"
     svr_model_path = "output_NTT_20k/svr_gpu_perf_predictor_model_ntt_v1.joblib"
     scaler_path = "output_NTT_20k/scaler_ntt_v1.joblib"
 
     df_test = load_dataset(csv_path)
 
-    df_test_4060 = df_test[df_test["gpu_name"].str.contains("4060", na=False)].copy()
+    df_test_4060 = df_test[df_test["gpu_name"].str.contains(
+        "4060", na=False)].copy()
 
     print("Loading scaler now")
     scaler = joblib.load(scaler_path)
@@ -252,6 +266,7 @@ def main():
     evaluate_model(svr_model, X_test, y_test, output_dir, name="SVR")
 
     print("\n=== Done ===")
+
 
 if __name__ == "__main__":
     main()

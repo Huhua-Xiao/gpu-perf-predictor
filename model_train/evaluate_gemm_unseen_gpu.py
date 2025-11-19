@@ -228,7 +228,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     print(f"\nAll files and output will be saved to {output_dir}\n")
 
-    csv_path = "../data/gemm_dataset_eval.csv"
+    csv_path = "data/gemm_dataset_eval.csv"
     xgb_model_path = "output_GEMM_20k/xgboost_gpu_perf_predictor_model_gemm_v1.joblib"
     svr_model_path = "output_GEMM_20k/svr_gpu_perf_predictor_model_gemm_v1.joblib"
     scaler_path = "output_GEMM_20k/scaler_gemm_v1.joblib"

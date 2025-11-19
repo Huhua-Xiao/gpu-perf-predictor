@@ -237,10 +237,10 @@ def main():
         epilog="""
 Examples:
   # Predict from CSV file
-  python predict.py --csv ../data/gemm_dataset_eval.csv --kernel gemm --model xgboost --model_dir output_GEMM_20k
+  python predict.py --csv data/gemm_dataset_eval.csv --kernel gemm --model xgboost --model_dir output_GEMM_20k
 
   # Predict from CSV with NTT model
-  python predict.py --csv ../data/ntt_dataset_eval.csv --kernel ntt --model svr --model_dir output_NTT_20k
+  python predict.py --csv data/ntt_dataset_eval.csv --kernel ntt --model svr --model_dir output_NTT_20k
         """
     )
 

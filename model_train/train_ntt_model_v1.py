@@ -377,9 +377,6 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     print(f"\nAll files and output will be saved to {output_dir}\n")
 
-    # Path to your CSV on CIMS
-    # csv_path = "../data/ntt_dataset_train.csv"
-
     # 1. Load data and run simple EDA (printed only)
     df = load_dataset(csv_path)
     basic_eda(df)

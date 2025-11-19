@@ -56,7 +56,7 @@ cd /home/$USER/Gpus/gpu-perf-predictor/model_train
 
 ### 2. Download Dataset
 
-Download the required training datasets (automatically creates `../data/` directory):
+Download the required training datasets (automatically creates `data/` directory inside `model_train/`):
 ```bash
 python download_dataset.py
 ```
@@ -76,12 +76,12 @@ python download_dataset.py
 
 #### GEMM Model
 ```bash
-python train_gemm_model_v1.py --dataset ../data/gemm_dataset_train.csv > run_output_gemm.txt
+python train_gemm_model_v1.py --dataset data/gemm_dataset_train.csv > run_output_gemm.txt
 ```
 
 #### NTT Model
 ```bash
-python train_ntt_model_v1.py --dataset ../data/ntt_dataset_train.csv > run_output_ntt.txt
+python train_ntt_model_v1.py --dataset data/ntt_dataset_train.csv > run_output_ntt.txt
 ```
 
 ## 📁 Directory Structure

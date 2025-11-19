@@ -28,14 +28,14 @@ If you previously used these scripts, update your commands to use the v1 version
 
 **Old:**
 ```bash
-python train_gemm_model.py --dataset ../data/gemm_dataset_train_20k.csv
+python train_gemm_model.py --dataset data/gemm_dataset_train_20k.csv
 ```
 
 **New:**
 ```bash
-python train_gemm_model_v1.py --dataset ../data/gemm_dataset_train_20k.csv
+python train_gemm_model_v1.py --dataset data/gemm_dataset_train_20k.csv
 # Output directory will auto-detect as output_GEMM_20k
 
 # Or specify manually:
-python train_gemm_model_v1.py --dataset ../data/gemm_dataset_train_30k.csv --output_dir output_GEMM_30k
+python train_gemm_model_v1.py --dataset data/gemm_dataset_train_30k.csv --output_dir output_GEMM_30k
 ```
