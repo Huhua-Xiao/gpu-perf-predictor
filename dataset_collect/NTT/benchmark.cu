@@ -397,17 +397,21 @@ public:
         return r;
     }
 
-    void differ_size_loop(int num_samples, unsigned int seed = 0) {
+    std::string differ_size_loop(int num_samples, const std::string& output_name = "", unsigned int seed = 0) {
         // If seed is 0, use random seed; otherwise use provided seed
         unsigned int actual_seed = (seed == 0) ? random_device{}() : seed;
         current_seed = actual_seed;
+
+        // Build filename
+        std::string filename = build_filename(output_name, num_samples, actual_seed);
 
         mt19937 gen(actual_seed);
         uniform_real_distribution<> U(0.0, 1.0);
 
         printf("Starting NTT benchmarking with %d samples...\n", num_samples);
-        printf("Random seed: %u %s\n", actual_seed, 
+        printf("Random seed: %u %s\n", actual_seed,
                (seed == 0) ? "(randomly generated)" : "(user-provided)");
+        printf("Output file: %s\n\n", filename.c_str());
 
         for (int i = 0; i < num_samples; ++i) {
             int k = 15 + (int)std::floor(U(gen) * (24 - 15 + 1));  // k ∈ [15,24] uniform
@@ -417,72 +421,135 @@ public:
             CUDA_CHECK(cudaDeviceSynchronize());
 
             if ((i + 1) % 100 == 0) {
-                save_to_csv("ntt_benchmark_results.csv");
+                save_to_csv(filename);
                 data.clear();
                 printf("Checkpoint saved (%d samples so far)\n\n", i + 1);
             }
         }
         printf("Done!\n");
+        return filename; // Return filename for final save
     }
 
     void save_to_csv(const std::string& filename) {
-        std::ifstream fin(filename); 
-        bool exists = fin.good(); 
+        std::ifstream fin(filename);
+        bool exists = fin.good();
         fin.close();
 
         std::ofstream f(filename, std::ios::app);
-        if (!f.is_open()) { 
-            printf("Failed to open file: %s\n", filename.c_str()); 
-            return; 
+        if (!f.is_open()) {
+            printf("Failed to open file: %s\n", filename.c_str());
+            return;
         }
         if (!exists) write_csv_header(f);
 
-        for (const auto& d : data) { 
+        for (const auto& d : data) {
             write_csv_row(f, d);
         }
 
-        f.close(); 
+        f.close();
         printf("Results saved to %s\n", filename.c_str());
+    }
+
+    // Helper function to build filename
+    static std::string build_filename(const std::string& output_name, int num_samples, unsigned int seed) {
+        std::string filename = "benchmark_results";
+        if (!output_name.empty()) {
+            filename += "_" + output_name;
+        }
+        filename += "_N" + std::to_string(num_samples);
+        if (seed != 0) {
+            filename += "_S" + std::to_string(seed);
+        }
+        filename += ".csv";
+        return filename;
     }
 };
 
 int main(int argc, char** argv) {
     if (argc < 3) {
-        printf("Usage: %s <method> <num_samples> [N] [repeats] [inner_iters] [seed]\n", argv[0]);
+        printf("Usage: %s <method> <num_samples> [output_name] [N] [repeats] [inner_iters] [seed]\n", argv[0]);
         printf("  method: 1 = Custom-NTT\n");
         printf("  num_samples: number of samples to run\n");
+        printf("  output_name: (optional) custom name for output file\n");
         printf("  N: (optional) fixed NTT size (power of 2). If not specified, random sizes will be used\n");
         printf("  repeats: (optional) number of repetitions (default: 10)\n");
         printf("  inner_iters: (optional) inner iterations (default: 50)\n");
         printf("  seed: (optional) random seed for reproducibility (default: random)\n");
+        printf("\nOutput file naming: benchmark_results_[output_name_]N{num_samples}[_S{seed}].csv\n");
         printf("\nExamples:\n");
-        printf("  %s 1 100                  # 100 samples, N randomly chosen as 2^k (k=10..20)\n", argv[0]);
-        printf("  %s 1 100 65536 10 50 42   # 100 samples, N=65536, repeats=10, inner_iters=50, seed=42\n", argv[0]);
-        printf("  %s 1 10 65536             # 10 samples, N=65536, default repeats and inner_iters\n", argv[0]);
+        printf("  %s 1 1000                      # Output: benchmark_results_N1000.csv\n", argv[0]);
+        printf("  %s 1 1000 a100_ntt             # Output: benchmark_results_a100_ntt_N1000.csv\n", argv[0]);
+        printf("  %s 1 500 test 65536 10 50 42   # Output: benchmark_results_test_N500_S42.csv (fixed N=65536)\n", argv[0]);
+        printf("  %s 1 1000 42                   # Output: benchmark_results_N1000_S42.csv (seed only)\n", argv[0]);
         return 1;
     }
 
     int method = std::stoi(argv[1]);
     int num_samples = std::stoi(argv[2]);
-    int N = (argc >= 4) ? std::stoi(argv[3]) : -1;
-    int repeats = (argc >= 5) ? std::stoi(argv[4]) : 10;
-    int inner_iters = (argc >= 6) ? std::stoi(argv[5]) : 50;
+    std::string output_name = "";
+    int N = -1;
+    int repeats = 10;
+    int inner_iters = 50;
     unsigned int seed = 0; // 0 means random seed
-    
-    if (argc >= 7) {
-        seed = static_cast<unsigned int>(std::stoul(argv[6]));
+
+    // Parse optional arguments - need to determine if argv[3] is output_name or N (or seed)
+    if (argc >= 4) {
+        std::string arg3 = argv[3];
+        bool is_number = true;
+        for (char c : arg3) {
+            if (!isdigit(c)) {
+                is_number = false;
+                break;
+            }
+        }
+
+        if (is_number) {
+            // argv[3] is either N or seed
+            int value = std::stoi(argv[3]);
+            // If value is a power of 2 >= 2, treat as N; otherwise treat as seed
+            if (is_power_of_two(value) && value >= 2) {
+                N = value;
+                if (argc >= 5) repeats = std::stoi(argv[4]);
+                if (argc >= 6) inner_iters = std::stoi(argv[5]);
+                if (argc >= 7) seed = static_cast<unsigned int>(std::stoul(argv[6]));
+            } else {
+                // Treat as seed
+                seed = static_cast<unsigned int>(value);
+            }
+        } else {
+            // argv[3] is output_name
+            output_name = argv[3];
+
+            // Parse remaining arguments
+            if (argc >= 5) {
+                int value = std::stoi(argv[4]);
+                if (is_power_of_two(value) && value >= 2) {
+                    N = value;
+                    if (argc >= 6) repeats = std::stoi(argv[5]);
+                    if (argc >= 7) inner_iters = std::stoi(argv[6]);
+                    if (argc >= 8) seed = static_cast<unsigned int>(std::stoul(argv[7]));
+                } else {
+                    // Treat as seed
+                    seed = static_cast<unsigned int>(value);
+                }
+            }
+        }
     }
 
-    if (method != 1) { 
-        printf("Error: method must be 1 (Custom-NTT)\n"); 
-        return 1; 
+    if (method != 1) {
+        printf("Error: method must be 1 (Custom-NTT)\n");
+        return 1;
     }
-    if (num_samples <= 0) { 
-        printf("Error: num_samples must be > 0\n"); 
-        return 1; 
+    if (num_samples <= 0) {
+        printf("Error: num_samples must be > 0\n");
+        return 1;
     }
 
     Collector collector(method);
+
+    // Generate actual seed for filename consistency
+    unsigned int actual_seed = (seed == 0) ? random_device{}() : seed;
+    std::string filename = Collector::build_filename(output_name, num_samples, actual_seed);
 
     if (N > 0) {
         // Fixed N mode
@@ -490,39 +557,39 @@ int main(int argc, char** argv) {
             printf("Error: N must be a power of 2 and >= 2\n");
             return 1;
         }
-        
-        unsigned int actual_seed = (seed == 0) ? random_device{}() : seed;
+
         printf("Running fixed-N benchmarks (N=%d) with %d samples\n", N, num_samples);
-        printf("Random seed: %u %s\n\n", actual_seed,
+        printf("Random seed: %u %s\n", actual_seed,
                (seed == 0) ? "(randomly generated)" : "(user-provided)");
-        
+        printf("Output file: %s\n\n", filename.c_str());
+
         for (int i = 0; i < num_samples; ++i) {
             auto rec = collector.benchmark_NTT(N, 998244353u, 3u, actual_seed, inner_iters, repeats);
-            
-            std::ifstream fin("ntt_benchmark_results.csv"); 
-            bool exists = fin.good(); 
+
+            std::ifstream fin(filename);
+            bool exists = fin.good();
             fin.close();
-            
-            std::ofstream f("ntt_benchmark_results.csv", std::ios::app);
-            if (!f.is_open()) { 
-                printf("Failed to open output\n"); 
-                return 1; 
+
+            std::ofstream f(filename, std::ios::app);
+            if (!f.is_open()) {
+                printf("Failed to open output\n");
+                return 1;
             }
             if (!exists) write_csv_header(f);
             write_csv_row(f, rec);
             f.close();
-            
+
             if ((i + 1) % 100 == 0) {
                 printf("Completed %d samples\n", i + 1);
             }
         }
         printf("Done fixed-N runs.\n");
-    } 
-    else {
-        // Random N mode
-        collector.differ_size_loop(num_samples, seed);
-        collector.save_to_csv("ntt_benchmark_results.csv");
     }
-    
+    else {
+        // Random N mode - filename is built and returned by differ_size_loop
+        filename = collector.differ_size_loop(num_samples, output_name, seed);
+        collector.save_to_csv(filename);
+    }
+
     return 0;
 }

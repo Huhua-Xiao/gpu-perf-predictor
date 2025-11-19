@@ -556,10 +556,13 @@ public:
     return perf_data;
   }
 
-  void differ_size_loop(int num_samples, unsigned int seed = 0) {
+  std::string differ_size_loop(int num_samples, const std::string& output_name = "", unsigned int seed = 0) {
     // If seed is 0, use random seed; otherwise use provided seed
     unsigned int actual_seed = (seed == 0) ? random_device{}() : seed;
     current_seed = actual_seed; // Store for reference
+
+    // Build filename
+    std::string filename = build_filename(output_name, num_samples, actual_seed);
 
     mt19937 gen(actual_seed);
     uniform_real_distribution<> uniform(0.0, 1.0);
@@ -567,6 +570,7 @@ public:
     printf("Starting benchmarking with %d samples...\n", num_samples);
     printf("Random seed: %u %s\n", actual_seed,
            (seed == 0) ? "(randomly generated)" : "(user-provided)");
+    printf("Output file: %s\n\n", filename.c_str());
 
     for (int i = 0; i < num_samples; i++) {
       double r1 = uniform(gen);
@@ -582,12 +586,13 @@ public:
 
       // Periodic save for every 100 samples
       if ((i + 1) % 100 == 0) {
-        save_to_csv("benchmark_results_cuda3.csv");
+        save_to_csv(filename);
         data.clear();
         printf("Checkpoint saved (%d samples so far)\n\n", i + 1);
       }
     }
     printf("Done!\n");
+    return filename; // Return filename for final save
   }
 
   void save_to_csv(const std::string &filename) {
@@ -607,28 +612,67 @@ public:
     f.close();
     printf("Results saved to %s\n", filename.c_str());
   }
+
+  // Helper function to build filename
+  static std::string build_filename(const std::string& output_name, int num_samples, unsigned int seed) {
+    std::string filename = "benchmark_results";
+    if (!output_name.empty()) {
+      filename += "_" + output_name;
+    }
+    filename += "_N" + std::to_string(num_samples);
+    if (seed != 0) {
+      filename += "_S" + std::to_string(seed);
+    }
+    filename += ".csv";
+    return filename;
+  }
 };
 
 int main(int argc, char **argv) {
   if (argc < 3) {
-    printf("Usage: %s <method> <num_samples> [seed]\n", argv[0]);
+    printf("Usage: %s <method> <num_samples> [output_name] [seed]\n", argv[0]);
     printf("  method: 0 = cuBLAS, 1 = Custom-MM\n");
     printf("  num_samples: number of samples to run\n");
-    printf("  seed: (optional) random seed for reproducibility (default: "
-           "random)\n");
+    printf("  output_name: (optional) custom name for output file\n");
+    printf("  seed: (optional) random seed for reproducibility (default: random)\n");
+    printf("\nOutput file naming: benchmark_results_[output_name_]N{num_samples}[_S{seed}].csv\n");
     printf("\nExamples:\n");
-    printf("  %s 0 100        # cuBLAS with 100 samples, random seed\n",
-           argv[0]);
-    printf("  %s 0 100 42     # cuBLAS with 100 samples, seed=42\n", argv[0]);
+    printf("  %s 0 1000                    # Output: benchmark_results_N1000.csv\n", argv[0]);
+    printf("  %s 0 1000 rtx4090            # Output: benchmark_results_rtx4090_N1000.csv\n", argv[0]);
+    printf("  %s 0 1000 rtx4090 42         # Output: benchmark_results_rtx4090_N1000_S42.csv\n", argv[0]);
+    printf("  %s 1 500 custom_kernel 12345 # Output: benchmark_results_custom_kernel_N500_S12345.csv\n", argv[0]);
     return 1;
   }
 
   int method = std::stoi(argv[1]);
   int num_samples = std::stoi(argv[2]);
+  std::string output_name = "";
   unsigned int seed = 0; // 0 means random seed
 
+  // Parse optional arguments
   if (argc >= 4) {
-    seed = static_cast<unsigned int>(std::stoul(argv[3]));
+    // Check if argv[3] is a number (seed) or string (output_name)
+    bool is_number = true;
+    std::string arg3 = argv[3];
+    for (char c : arg3) {
+      if (!isdigit(c)) {
+        is_number = false;
+        break;
+      }
+    }
+
+    if (is_number) {
+      // argv[3] is seed
+      seed = static_cast<unsigned int>(std::stoul(argv[3]));
+    } else {
+      // argv[3] is output_name
+      output_name = argv[3];
+
+      // Check for seed in argv[4]
+      if (argc >= 5) {
+        seed = static_cast<unsigned int>(std::stoul(argv[4]));
+      }
+    }
   }
 
   if (method != 0 && method != 1) {
@@ -642,7 +686,7 @@ int main(int argc, char **argv) {
   }
 
   Collector collector(method);
-  collector.differ_size_loop(num_samples, seed);
-  collector.save_to_csv("benchmark_results_cuda3.csv");
+  std::string filename = collector.differ_size_loop(num_samples, output_name, seed);
+  collector.save_to_csv(filename);
   return 0;
 }
