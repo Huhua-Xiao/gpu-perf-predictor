@@ -47,10 +47,11 @@ dataset_collect/
 ### 1. Environment Setup
 
 ```bash
-# Load CUDA module (on HPC systems)
+# Load CUDA module (on NYU CIMS CUDA clusters)
 module load cuda-12.4
 
-# Verify CUDA installation
+# Verify CUDA version
+# This benchmark expected to run under CUDA 12.x, modify the code if you want to run under CUDA 13.0
 nvcc --version
 ```
 
@@ -58,6 +59,7 @@ nvcc --version
 
 ```bash
 # Compile both benchmarks
+# nvcc -O3 -std=c++17 -lcublas -lnvidia-ml
 make all
 
 # Or compile individually
@@ -93,6 +95,7 @@ cp benchmark_results_*.csv ../model_train/data/
 
 ```bash
 # Compile both benchmarks
+# nvcc -O3 -std=c++17 -lcublas -lnvidia-ml
 make all
 
 # Compile only GEMM
@@ -127,13 +130,13 @@ The GEMM benchmark tests matrix multiplication performance with two implementati
 **Examples:**
 ```bash
 # cuBLAS implementation with 10k samples
-./gemm_benchmark 0 10000 cublas_run1
+./gemm_benchmark 0 10000 gemm_run1
 
 # Custom tiled implementation with 10k samples
-./gemm_benchmark 1 10000 custom_run1
+./gemm_benchmark 1 10000 gemm_run1
 
 # With fixed random seed
-./gemm_benchmark 0 10000 cublas_run1 42
+./gemm_benchmark 0 10000 gemm_run1 42
 
 # Default naming (no output_name)
 ./gemm_benchmark 0 1000
@@ -147,17 +150,20 @@ The NTT benchmark tests number-theoretic transform performance using Cooley-Tuke
 
 **Usage:**
 ```bash
-./ntt_benchmark <num_samples> [output_name] [seed]
+./ntt_benchmark <num_samples> [output_name] [N] [repeats] [inner_iters] [seed]
 ```
 
 **Parameters:**
 - `num_samples`: Number of configurations to benchmark
 - `output_name`: Optional output file prefix
-- `seed`: Optional random seed for reproducibility
+- `N`: Optional fixed NTT size (power of 2). If not specified, random sizes will be used
+- `repeats`: Optional number of repetitions (default: 10)
+- `inner_iters`: Optional inner iterations (default: 50)
+- `seed`: Optional random seed for reproducibility (default: random)
 
 **Examples:**
 ```bash
-# Run with 5000 samples
+# Run with 5000 samples (random N sizes)
 ./ntt_benchmark 5000 ntt_run1
 
 # With fixed random seed
@@ -165,6 +171,12 @@ The NTT benchmark tests number-theoretic transform performance using Cooley-Tuke
 
 # Default naming
 ./ntt_benchmark 1000
+
+# Fixed N=65536 with custom settings
+./ntt_benchmark 500 test 65536 10 50 42
+
+# Seed only (treats numeric arg as seed if not power of 2)
+./ntt_benchmark 1000 42
 ```
 
 **Output features:** 36 columns including GPU specs, NTT size (N), timing metrics, butterfly operations, modular operations
