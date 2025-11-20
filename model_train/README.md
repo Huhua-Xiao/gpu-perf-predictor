@@ -1,12 +1,19 @@
-# Model Training
+# GPU Performance Predictor - Model Training
 
 This directory contains the training scripts and utilities for GEMM and NTT models.
 
-output_GEMM stores the 10k GEMM results, and output_GEMM_20k stores the 20k GEMM results. 
+## Output Directories
 
-output_NTT stores the 10k NTT results, and output_NTT_25k stores the 25k NTT results. 
+- **output_GEMM/**: Stores training results for GEMM models trained on 10k dataset
+- **output_GEMM_20k/**: Stores training results for GEMM models trained on 20k dataset
+- **output_GEMM_eval/**: Stores evaluation results using models from output_GEMM/
+- **output_GEMM_eval_20k/**: Stores evaluation results using models from output_GEMM_20k/
+- **output_NTT/**: Stores training results for NTT models trained on 10k dataset
+- **output_NTT_20k/**: Stores training results for NTT models trained on 20k dataset
+- **output_NTT_eval/**: Stores evaluation results using models from output_NTT/
+- **output_NTT_eval_20k/**: Stores evaluation results using models from output_NTT_20k/ 
 
-##  Quick Start
+## Quick Start
 
 ### 1. Environment Setup
 
@@ -43,15 +50,15 @@ python3 -m venv .venv
 source .venv/bin/activate # On Windows: .venv\Scripts\activate
 
 # 7. Install dependencies from the project directory 
-# Note: Use your own path!!
-pip install -r /home/$USER/Gpus/gpu-perf-predictor/model_train/requirements_scratch.txt
+# Note: Update the path to match your project location!
+pip install -r <path-to-project>/gpu-perf-predictor/model_train/requirements_scratch.txt
 
 # 8. Close the current terminal then open a new terminal to reactivate scratch environment (works from anywhere)
 source /scratch/$USER/model_train/.venv/bin/activate
 
 # Navigate to the model_train directory
-# Note: Use your own path!!
-cd /home/$USER/Gpus/gpu-perf-predictor/model_train
+# Note: Update the path to match your project location!
+cd <path-to-project>/gpu-perf-predictor/model_train
 ```
 
 ### 2. Download Dataset
@@ -62,47 +69,85 @@ python download_dataset.py
 ```
 
 **Downloaded files:**
-- `gemm_dataset_train.csv`
-- `ntt_dataset_train.csv`
-- `gemm_dataset_train_20k.csv`
-- `ntt_dataset_train_20k.csv`
-- `gemm_dataset_train_30k.csv`
-- `gemm_dataset_eval.csv`
-- `ntt_dataset_eval.csv`
->  **Dataset Source**: All datasets are available at [https://huggingface.co/NYUGPUClass](https://huggingface.co/NYUGPUClass)
+- `gemm_dataset_train.csv` (10k samples)
+- `ntt_dataset_train.csv` (10k samples)
+- `gemm_dataset_train_20k.csv` (20k samples)
+- `ntt_dataset_train_20k.csv` (20k samples)
+- `gemm_dataset_train_30k.csv` (30k samples)
+- `gemm_dataset_eval.csv` (evaluation dataset)
+- `ntt_dataset_eval.csv` (evaluation dataset)
+
+> **Dataset Source**: All datasets are available at [https://huggingface.co/NYUGPUClass](https://huggingface.co/NYUGPUClass)
 
 
 ### 3. Train Models
 
 #### GEMM Model
+
+Train on 10k dataset:
 ```bash
 python train_gemm_model_v1.py --dataset ../data/gemm_dataset_train.csv > run_output_gemm.txt
 ```
 
+Train on 20k dataset:
+```bash
+python train_gemm_model_v1.py --dataset ../data/gemm_dataset_train_20k.csv > run_output_gemm.txt
+```
+
+**Note**: The output directory is hardcoded in the script. For 20k dataset, modify `output_dir` in `train_gemm_model_v1.py` to `"output_GEMM_20k"` (or use the default if already set).
+
 #### NTT Model
+
+Train on 10k dataset:
 ```bash
 python train_ntt_model_v1.py --dataset ../data/ntt_dataset_train.csv > run_output_ntt.txt
 ```
 
-## 📁 Directory Structure
-```
-model_train/
-├── output_GEMM/          # GEMM training logs and checkpoints
-├── output_GEMM/          # GEMM training logs and checkpoints. //todo
-├── output_NTT/           # NTT training logs and checkpoints
-├── run_output_gemm.txt   # GEMM training stdout
-└── run_output_ntt.txt    # NTT training stdout
+Train on 20k dataset:
+```bash
+python train_ntt_model_v1.py --dataset ../data/ntt_dataset_train_20k.csv > run_output_ntt.txt
 ```
 
-##  Output
+**Note**: The output directory is hardcoded in the script. For 20k dataset, modify `output_dir` in `train_ntt_model_v1.py` to `"output_NTT_20k"` (or use the default if already set).
 
-Training outputs and logs are automatically saved to:
-- **GEMM outputs**: `output_GEMM/`
-- **NTT outputs**: `output_NTT/`
-- **Training logs**: `run_output_gemm.txt` and `run_output_ntt.txt`
+### 4. Evaluate Models on Unseen GPUs
 
-##  Tips
+After training, you can evaluate models on evaluation datasets:
+
+#### GEMM Evaluation
+```bash
+python evaluate_gemm_unseen_gpu.py
+```
+
+#### NTT Evaluation
+```bash
+python evaluate_ntt_unseen_gpu.py
+```
+
+**Note**: Make sure the evaluation scripts point to the correct model and scaler paths from your training output directories.
+
+## Output
+
+Each output directory contains:
+- **Trained Models**: 
+  - `xgboost_gpu_perf_predictor_model_*_v1.joblib` (XGBoost model)
+  - `svr_gpu_perf_predictor_model_*_v1.joblib` (SVR model)
+- **Preprocessing**: 
+  - `scaler_*_v1.joblib` (StandardScaler for feature normalization)
+- **Evaluation Results**:
+  - `prediction_results_*_xgboost.csv` (XGBoost predictions)
+  - `prediction_results_*_svm.csv` (SVR predictions)
+  - `predictions_vs_actual_*.png` (Prediction vs actual plots)
+  - `residual_analysis_*.png` (Residual analysis plots)
+- **Feature Importance** (XGBoost only):
+  - `xgb_feature_importances_*_v1.png`
+- **Training Logs**:
+  - `run_output_*.txt` (Training stdout)
+  - `eval_output_*.txt` (Evaluation stdout)
+
+## Tips
 
 - Make sure your virtual environment is activated before running any commands
 - Training may take significant time depending on your hardware
 - Check the output logs for training progress and metrics
+- The training scripts use hardcoded output directories - modify them in the script if you want to use different directories
