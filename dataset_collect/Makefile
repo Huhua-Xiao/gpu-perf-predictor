@@ -8,8 +8,8 @@ GEMM_TARGET := gemm_benchmark
 NTT_TARGET := ntt_benchmark
 
 # Source files
-GEMM_SRC := gemm_benchmark.cu gemm.cu
-NTT_SRC := ntt_benchmark.cu ntt.cu
+GEMM_SRC := gemm_benchmark.cu
+NTT_SRC := ntt_benchmark.cu
 
 .PHONY: all gemm ntt clean
 

@@ -152,7 +152,7 @@ static int fp32_cores_per_sm(int major, int minor) {
 }
 
 static double estimate_peak_fp32_GFLOPs(const cudaDeviceProp& p) {
-    int cores = fp32_cores_per_sm_est(p.major, p.minor);
+    int cores = fp32_cores_per_sm(p.major, p.minor);
     double sm_hz = p.clockRate * 1000.0;
     return static_cast<double>(p.multiProcessorCount) * 
         cores * 2.0 * (sm_hz / 1e9) * 1.2; // FMA and boost
