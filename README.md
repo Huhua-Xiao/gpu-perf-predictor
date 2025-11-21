@@ -72,17 +72,11 @@ This project provides a complete workflow for **GPU performance prediction** usi
 gpu-perf-predictor/
 ├── dataset_collect/                # CUDA benchmarking tools
 │   ├── README.md                   # Data collection guide
-│   ├── GEMM/                       # GEMM CUDA benchmarking
-│   │   ├── README.md               # GEMM benchmarking guide
-│   │   ├── benchmark.cu            # Main benchmarking code
-│   │   ├── gemm.cu                 # GEMM kernel implementations
-│   │   └── Makefile                # Build configuration
-│   └── NTT/                        # NTT CUDA benchmarking
-│       ├── README.md               # NTT benchmarking guide
-│       ├── benchmark.cu            # Main benchmarking code
-│       ├── ntt.cu                  # NTT kernel implementation
-│       └── Makefile                # Build configuration
-│
+│   ├── gemm_benchmark.cu           # GEMM benchmarking code
+│   ├── ntt_benchmark.cu            # NTT benchmarking code
+│   ├── gemm.cu                     # GEMM kernel implementations
+│   ├── ntt.cu                      # NTT kernel implementation
+│   └── Makefile                    # Build configuration
 ├── model_train/                    # ML training pipeline
 │   ├── README.md                   # Training workflow guide
 │   ├── data/                       # Datasets (created by download_dataset.py)
@@ -110,8 +104,6 @@ gpu-perf-predictor/
 │   ├── predict.py                  # Prediction interface
 │   ├── download_dataset.py         # Dataset downloader
 │   └── requirements.txt            # Python dependencies
-│
-├── IMPROVEMENTS.md                 # Project improvements log
 └── README.md                       # This file
 ```
 
