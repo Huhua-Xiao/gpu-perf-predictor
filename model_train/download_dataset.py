@@ -1,7 +1,8 @@
 from datasets import load_dataset
 import os
 
-output_dir = os.path.join("..", "data")
+# Create data directory inside model_train instead of root
+output_dir = "data"
 os.makedirs(output_dir, exist_ok=True)
 
 dataset_gemm = load_dataset("NYUGPUClass/GEMM_dataset")

@@ -11,6 +11,26 @@ from xgboost import XGBRegressor
 import joblib
 from sklearn.svm import SVR
 import argparse
+from datetime import datetime
+
+
+class TeeLogger:
+    """Logger that writes to both stdout and a file."""
+    def __init__(self, filepath):
+        self.terminal = sys.stdout
+        self.log = open(filepath, 'w', encoding='utf-8')
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+        self.log.flush()  # Ensure immediate write
+
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+
+    def close(self):
+        self.log.close()
 
 # =========================
 # 1. Data loading and EDA
@@ -56,7 +76,16 @@ def preprocess(df: pd.DataFrame):
         raise ValueError("Column 'time_ms_mean' not found;")
     y = df["time_ms_mean"]
 
-    # 2. Separate features and target variable
+    # 2. Create a copy to avoid modifying the original DataFrame
+    df = df.copy()
+
+    # 3. Create combined compute capability feature from cc_major and cc_minor
+    # This handles cases like 8.0, 9.0 where cc_minor=0 which can cause issues
+    if "cc_major" in df.columns and "cc_minor" in df.columns:
+        df["compute_capability"] = df["cc_major"] + df["cc_minor"] / 10.0
+        print(f"Created compute_capability feature: {df['compute_capability'].unique()}")
+
+    # 4. Separate features and target variable
     columns_to_drop = [
         # target & time-based metrics related to the time_ms_mean
         # might casue the data leakage
@@ -80,6 +109,8 @@ def preprocess(df: pd.DataFrame):
         "algorithm",        # constant "Custom-NTT" in this dataset
         "seed",             # random seed, just noise
         "gpu_name",         # avoid overfitting to specific GPU names
+        "cc_major",         # Drop in favor of combined compute_capability
+        "cc_minor",         # Drop in favor of combined compute_capability
     ]
 
     X = df.drop(columns=columns_to_drop, errors="ignore")
@@ -88,7 +119,7 @@ def preprocess(df: pd.DataFrame):
     print(f"Shape of X: {X.shape}")
     print(f"Shape of y: {y.shape}")
 
-    # 3. Handle missing values in numerical columns
+    # 5. Handle missing values in numerical columns
     missing_numerical_cols = X.select_dtypes(include=['number']).columns[X.select_dtypes(include=['number']).isnull().any()].tolist()
 
     print("\n Numerical columns in X with missing values:")
@@ -103,18 +134,7 @@ def preprocess(df: pd.DataFrame):
     print("Missing values in numerical columns after imputation:")
     print(X[missing_numerical_cols].isnull().sum())
 
-    # # 4. One-hot encode categorical columns
-    # categorical_cols_to_encode = X.select_dtypes(include=["object"]).columns.tolist()
-    # print("\nCategorical columns in X to be encoded:")
-    # print(categorical_cols_to_encode)
-
-    # if categorical_cols_to_encode:
-    #     X = pd.get_dummies(X, columns=categorical_cols_to_encode, drop_first=True)
-    #     print("Applied one-hot encoding. New X shape:", X.shape)
-    # else:
-    #     print("No categorical columns to encode.")
-
-    # 5. Standard-scale numeric features (excluding 0/1 dummy columns)
+    # 4. Standard-scale numeric features (excluding 0/1 dummy columns)
     numeric_cols_after = X.select_dtypes(include=["number"]).columns.tolist()
     non_boolean_numeric_cols = []
     for col in numeric_cols_after:
@@ -136,6 +156,7 @@ def preprocess(df: pd.DataFrame):
 # =========================
 
 def train_xgb(X_train, y_train):
+    # Add regularization parameters to prevent overfitting
     xgb_model = XGBRegressor(random_state=42)
 
     param_grid = {
@@ -144,6 +165,9 @@ def train_xgb(X_train, y_train):
         "max_depth": [3, 5, 7],
         "subsample": [0.7, 0.8],
         "colsample_bytree": [0.7, 0.8],
+        "reg_alpha": [0, 0.1, 1.0],  # L1 regularization
+        "reg_lambda": [1.0, 2.0, 5.0],  # L2 regularization (default is 1.0)
+        "min_child_weight": [1, 3, 5],  # Minimum sum of instance weight needed in a child
     }
 
     print("\n=== XGBoost Regressor model initialized and parameter grid defined ===")
@@ -357,61 +381,110 @@ def main():
         required=True,
         help="Path to the NTT dataset CSV file"
     )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default=None,
+        help="Output directory for models and results. If not specified, will auto-detect from dataset filename (e.g., output_NTT_20k for ntt_dataset_train_20k.csv)"
+    )
     args = parser.parse_args()
     csv_path = args.dataset
 
-    output_dir = "output_NTT_20k"
+    # Auto-detect output_dir from dataset filename if not specified
+    if args.output_dir is None:
+        dataset_basename = os.path.basename(csv_path)
+        if "10k" in dataset_basename or dataset_basename == "ntt_dataset_train.csv":
+            output_subdir = "output_NTT_10k"
+        elif "20k" in dataset_basename:
+            output_subdir = "output_NTT_20k"
+        elif "30k" in dataset_basename:
+            output_subdir = "output_NTT_30k"
+        else:
+            output_subdir = "output_NTT"
+        output_dir = os.path.join("output", output_subdir)
+        print(f"Auto-detected output directory: {output_dir}")
+    else:
+        # If user specifies custom dir, put it inside output/ folder
+        output_dir = os.path.join("output", args.output_dir)
+
     os.makedirs(output_dir, exist_ok=True)
-    print(f"\nAll files and output will be saved to {output_dir}\n")
 
-    # Path to your CSV on CIMS
-    # csv_path = "../data/ntt_dataset_train.csv"
+    # Set up logging to both console and file
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = os.path.join(output_dir, f"training_log_{timestamp}.txt")
+    logger = TeeLogger(log_file)
+    sys.stdout = logger
 
-    # 1. Load data and run simple EDA (printed only)
-    df = load_dataset(csv_path)
-    basic_eda(df)
+    print(f"=" * 80)
+    print(f"GPU NTT Performance Predictor - Training Log")
+    print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"=" * 80)
+    print(f"\nDataset: {csv_path}")
+    print(f"Output directory: {output_dir}")
+    print(f"Log file: {log_file}\n")
 
+    try:
+        # 1. Load data and run simple EDA (printed only)
+        df = load_dataset(csv_path)
+        basic_eda(df)
 
-    # 2. Preprocess (cleaning, encoding, scaling)
-    X, y, scaler = preprocess(df)
-    scaler_path = os.path.join(output_dir, "scaler_ntt_v1.joblib")
-    joblib.dump(scaler, scaler_path)
-    print(f"Scaler saved to: {scaler_path}")
+        # 2. Preprocess (cleaning, encoding, scaling)
+        X, y, scaler = preprocess(df)
+        scaler_path = os.path.join(output_dir, "scaler_ntt_v1.joblib")
+        joblib.dump(scaler, scaler_path)
+        print(f"Scaler saved to: {scaler_path}")
 
-    # 3. Train/test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    print("Data split into training and testing sets successfully.")
-    print(f"X_train shape: {X_train.shape}")
-    print(f"X_test shape: {X_test.shape}")
-    print(f"y_train shape: {y_train.shape}")
-    print(f"y_test shape: {y_test.shape}")
+        # 3. Train/test split
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        print("Data split into training and testing sets successfully.")
+        print(f"X_train shape: {X_train.shape}")
+        print(f"X_test shape: {X_test.shape}")
+        print(f"y_train shape: {y_train.shape}")
+        print(f"y_test shape: {y_test.shape}")
 
-    # 4. Train XGBoost with GridSearchCV
-    best_xgb_model = train_xgb(X_train, y_train)
+        # 4. Train XGBoost with GridSearchCV
+        best_xgb_model = train_xgb(X_train, y_train)
 
-    # 5. Plot feature importances (optional but useful for report)
-    plot_feature_importance(best_xgb_model, X_train.columns, output_dir)
+        # 5. Plot feature importances (optional but useful for report)
+        plot_feature_importance(best_xgb_model, X_train.columns, output_dir)
 
-    # 6. Evaluate on test set
-    evaluate_model(best_xgb_model, X_test, y_test, output_dir, name="XGBoost")
+        # 6. Evaluate on test set
+        evaluate_model(best_xgb_model, X_test, y_test, output_dir, name="XGBoost")
 
-    # 7. Save model to disk
-    model_filename =os.path.join(output_dir, "xgboost_gpu_perf_predictor_model_ntt_v1.joblib")
-    joblib.dump(best_xgb_model, model_filename)
-    print(f"\nSaved trained XGBoost model to: {model_filename}")
+        # 7. Save model to disk
+        model_filename =os.path.join(output_dir, "xgboost_gpu_perf_predictor_model_ntt_v1.joblib")
+        joblib.dump(best_xgb_model, model_filename)
+        print(f"\nSaved trained XGBoost model to: {model_filename}")
 
-     # 8. Train SVM regression model (SVR)
-    best_svr_model = train_svm(X_train, y_train)
+        # 8. Train SVM regression model (SVR)
+        best_svr_model = train_svm(X_train, y_train)
 
-    # 9. Evaluate SVM on test set
-    evaluate_model(best_svr_model, X_test, y_test, output_dir, name="SVR")
+        # 9. Evaluate SVM on test set
+        evaluate_model(best_svr_model, X_test, y_test, output_dir, name="SVR")
 
-    # 10. Save SVR model
-    svr_model_filename = os.path.join(output_dir, "svr_gpu_perf_predictor_model_ntt_v1.joblib")
-    joblib.dump(best_svr_model, svr_model_filename)
-    print(f"Saved trained SVR model to: {svr_model_filename}")
+        # 10. Save SVR model
+        svr_model_filename = os.path.join(output_dir, "svr_gpu_perf_predictor_model_ntt_v1.joblib")
+        joblib.dump(best_svr_model, svr_model_filename)
+        print(f"Saved trained SVR model to: {svr_model_filename}")
 
-    print("\n=== Done ===")
+        print("\n" + "=" * 80)
+        print("=== Training Complete ===")
+        print(f"Finished at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print("=" * 80)
+
+    except Exception as e:
+        print(f"\n{'='*80}")
+        print(f"ERROR: Training failed with exception:")
+        print(f"{'='*80}")
+        print(f"{type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+    finally:
+        # Restore stdout and close log file
+        sys.stdout = logger.terminal
+        logger.close()
+        print(f"\nLog saved to: {log_file}")
 
 
 if __name__ == "__main__":

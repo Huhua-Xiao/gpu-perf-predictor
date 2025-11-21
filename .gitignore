@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Model files (large binary files)
+*.joblib
+*.pkl
+*.pickle
+*.h5
+
+# Output directories (training results)
+model_train/output/
+!model_train/output/.gitkeep
+
+# Data directories
+model_train/data/
+*.csv
+!requirements.txt
+!requirements_scratch.txt
+IMPROVEMENTS.md
+
+# Compiled CUDA
+*.o
+*.out
+*.exe
+GEMM/gemm
+GEMM/benchmark
+NTT/ntt
+NTT/benchmark
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+*~

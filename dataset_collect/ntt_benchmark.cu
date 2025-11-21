@@ -15,14 +15,14 @@ using namespace std;
 
 struct PerfData {
     // Static GPU info
-    string gpu_name;
-    int device_id;
-    int cc_major, cc_minor;            // Compute Capability
-    int sm_count;                      // Streaming Multiprocessor
-    long long l2_size_bytes;           // L2 cache
-    int shared_mem_per_sm;             // Shared memory per SM
-    long long total_global_mem;        // Total global memory
-    double mem_bandwidth_GBps_est;     // Estimated bandwidth
+    string gpu_name;                   // GPU name
+    int device_id;                     // Device ID (0)
+    int cc_major, cc_minor;            // Compute Capability major.minor
+    int sm_count;                      // number of streaming multiprocessors
+    long long l2_size_bytes;           // L2 cache size in bytes
+    int shared_mem_per_sm;             // Shared memory per SM in bytes
+    long long total_global_mem;        // Total global memory in bytes
+    double mem_bandwidth_GBps_est;     // Estimated memory bandwidth in GB/s
     double peak_flops_fp32_GFLOPs_est; // Estimated peak FP32 GFLOPs
     int driver_version;                // Driver version
     int cuda_runtime_version;          // CUDA runtime version
@@ -34,16 +34,16 @@ struct PerfData {
     int N;                             // NTT size
     uint32_t modulus;                  // Modulus p
     uint32_t primitive_root;           // Primitive root g
-    int repeats;
-    int inner_iters;
-    string algorithm;                  // "Custom-NTT"
+    int repeats;                       // Number of repetitions
+    int inner_iters;                   // Number of inner iterations
+    string algorithm;                  // Custom-NTT
     unsigned int seed;                 // Random seed for reproducibility
     
     // Runtime statistics (per-run averaged over inner_iters)
-    double time_ms_mean;
-    double time_ms_median;
-    double time_ms_p95;
-    double time_ms_stddev;
+    double time_ms_mean;               // Mean time in milliseconds
+    double time_ms_median;             // Median time in milliseconds
+    double time_ms_p95;                // 95th percentile time in milliseconds
+    double time_ms_stddev;             // Standard deviation of time in milliseconds
     double actual_clock_mhz;           // Actual GPU clock in MHz
     double actual_mem_clock_mhz;       // Actual GPU memory clock in MHz
     double temperature_c;              // GPU temperature in Celsius
@@ -54,59 +54,9 @@ struct PerfData {
     double modops_total;               // butterflies_total * 3
     double modops_per_sec;             // modops_total / mean_time
     double bytes_total_theoretical;    // ~8*N*log2(N) (read + write per element per stage)
-    double memory_throughput_GBps;
-    double memory_efficiency_pct;      // / mem_bandwidth_GBps_est
+    double memory_throughput_GBps;     // memory throughput in GB/s
+    double memory_efficiency_pct;      // mem_bandwidth_GBps_est
 };
-
-// Utility functions
-static double estimate_mem_bw_GBs(const cudaDeviceProp& p) {
-    double memClockHz = static_cast<double>(p.memoryClockRate) * 1000.0;
-    double busBytes   = static_cast<double>(p.memoryBusWidth) / 8.0;
-    return (memClockHz * busBytes * 2.0) / 1e9; // GB/s (DDR * 2)
-}
-
-static int fp32_cores_per_sm_est(int major, int minor) {
-    const int cc = major * 10 + minor;
-    if (cc >= 30 && cc <= 37) return 192;  // Kepler
-    if (cc >= 50 && cc <= 53) return 128;  // Maxwell
-    if (cc == 60) return 64;               // Pascal GP100
-    if (cc == 61 || cc == 62) return 128;  // Pascal GP102/104/106
-    if (cc == 70) return 64;               // Volta
-    if (cc == 75) return 64;               // Turing
-    if (cc == 80 || cc == 86 || cc == 89 || cc == 90) return 128; // Ampere/Ada/Hopper/Blackwell
-    return 128;
-}
-
-static double estimate_peak_fp32_GFLOPs(const cudaDeviceProp& p) {
-    int cores = fp32_cores_per_sm_est(p.major, p.minor);
-    double sm_hz = p.clockRate * 1000.0;
-    return static_cast<double>(p.multiProcessorCount) * cores * 2.0 * (sm_hz / 1e9) * 1.2; // FMA and boost
-}
-
-static void summarize(const std::vector<double>& ms, double& mean, double& median, double& p95, double& stddev) {
-    if (ms.empty()) { 
-        mean = median = p95 = stddev = 0.0; 
-        return; 
-    }
-    
-    double s = 0.0; 
-    for (auto x : ms) s += x; 
-    mean = s / ms.size();
-    
-    double sq = 0.0; 
-    for (auto x : ms) { 
-        double d = x - mean; 
-        sq += d * d; 
-    } 
-    stddev = sqrt(sq / ms.size());
-    
-    vector<double> v = ms; 
-    sort(v.begin(), v.end()); 
-    median = v[v.size() / 2];
-    
-    size_t i95 = (size_t)(0.95 * (v.size() - 1)); 
-    p95 = v[i95];
-}
 
 // CSV functions
 static void write_csv_header(std::ofstream& f) {
@@ -160,7 +110,91 @@ static void write_csv_row(std::ofstream& f, const PerfData& r) {
       << "\n";
 }
 
-// Collector (NTT)
+// Utility functions
+static double estimate_mem_bw_GBs(const cudaDeviceProp& p) {
+  double memClockHz = static_cast<double>(p.memoryClockRate) * 1000.0;
+  double busBytes   = static_cast<double>(p.memoryBusWidth) / 8.0;
+  return (memClockHz * busBytes * 2.0) / 1e9; // GB/s (DDR * 2)
+
+  // CUDA 13.0
+  // int memClockKHz = 0;
+  // CUDA_CHECK(cudaDeviceGetAttribute(&memClockKHz, cudaDevAttrMemoryClockRate,
+  // 0)); int busWidthBits = 0; CUDA_CHECK(cudaDeviceGetAttribute(&busWidthBits,
+  // cudaDevAttrGlobalMemoryBusWidth, 0)); double memClockHz =
+  // static_cast<double>(memClockKHz) * 1000.0; double busBytes =
+  // static_cast<double>(busWidthBits) / 8.0; return (memClockHz * busBytes
+  // * 2.0) / 1e9; // DDR * 2
+}
+
+static int fp32_cores_per_sm(int major, int minor) {
+  const int cc = major * 10 + minor;
+  // Kepler
+  if (cc >= 30 && cc <= 37)
+    return 192; // 3.0/3.5/3.7
+  // Maxwell
+  if (cc >= 50 && cc <= 53)
+    return 128; // 5.0/5.2/5.3
+  // Pascal
+  if (cc == 60)
+    return 64; // GP100
+  if (cc == 61 || cc == 62)
+    return 128; // GP102/104/106, TX2
+  // Volta
+  if (cc == 70)
+    return 64;
+  // Turing
+  if (cc == 75)
+    return 64;
+  // Ampere / Ada / Hopper / Blackwell
+  if (cc == 80 || cc == 86 || cc == 89 || cc == 90)
+    return 128;
+  return 128;
+}
+
+static double estimate_peak_fp32_GFLOPs(const cudaDeviceProp& p) {
+    int cores = fp32_cores_per_sm(p.major, p.minor);
+    double sm_hz = p.clockRate * 1000.0;
+    return static_cast<double>(p.multiProcessorCount) * 
+        cores * 2.0 * (sm_hz / 1e9) * 1.2; // FMA and boost
+
+  // CUDA 13.0
+  // int clockKHz = 0;
+  // CUDA_CHECK(cudaDeviceGetAttribute(&clockKHz, cudaDevAttrClockRate, 0));
+  // const double ghz = static_cast<double>(clockKHz) / 1e6;
+  // return static_cast<double>(p.multiProcessorCount)
+  //      * fp32_cores_per_sm(p.major, p.minor) * 2.0 * ghz * 1.2; // FMA and
+  //      boost
+}
+
+static void summarize(const std::vector<double>& ms, double& mean,
+                      double& median, double& p95, double& stddev) {
+    if (ms.empty()) { 
+        mean = median = p95 = stddev = 0.0; 
+        return; 
+    }
+    
+    // Mean
+    double s = 0.0; 
+    for (auto x : ms) s += x; 
+    mean = s / ms.size();
+    
+    // Stddev
+    double sq = 0.0; 
+    for (auto x : ms) { 
+        double d = x - mean; 
+        sq += d * d; 
+    } 
+    stddev = sqrt(sq / ms.size());
+    
+    // Median and p95
+    vector<double> v = ms; 
+    sort(v.begin(), v.end()); 
+    median = v[v.size() / 2];
+    
+    size_t i95 = (size_t)(0.95 * (v.size() - 1)); 
+    p95 = v[i95];
+}
+
 class Collector {
     vector<PerfData> data;
 
@@ -187,7 +221,7 @@ class Collector {
     bool nvml_available;
 
     void gpu_info(int method) {
-        device_id = 0; // Set to GPU to avoid competition with other groups
+        device_id = 0;
         cudaDeviceProp prop;
         CUDA_CHECK(cudaSetDevice(device_id));
         CUDA_CHECK(cudaGetDeviceProperties(&prop, device_id));
@@ -234,9 +268,17 @@ class Collector {
         printf("GPU: %s\n", gpu_name.c_str());
         printf("Algorithm: %s\n", algorithm.c_str());
         printf("Compute Capability: %d.%d\n", cc_major, cc_minor);
-        printf("SM Count: %d | Warp Size: %d\n", sm_count, warp_size);
-        printf("Peak FP32: %.1f GFLOPS | Mem BW: %.1f GB/s\n\n",
-               peak_flops_fp32_GFLOPs_est, mem_bandwidth_GBps_est);
+    }
+
+public:
+    Collector(int method) {
+        gpu_info(method);
+    }
+
+    ~Collector() {
+        if (nvml_available) {
+            nvmlShutdown();
+        }
     }
 
     void collect_runtime_metrics(double& clock_mhz, double& mem_clock_mhz,
@@ -276,16 +318,6 @@ class Collector {
         }
     }
 
-public:
-    Collector(int method) {
-        gpu_info(method);
-    }
-
-    ~Collector() {
-        if (nvml_available) {
-            nvmlShutdown();
-        }
-    }
 
     PerfData benchmark_NTT(int N, uint32_t modulus = 998244353u, uint32_t primitive_root = 3u,
                           unsigned int seed_for_this_run = 0,
@@ -378,36 +410,40 @@ public:
         r.temperature_c = actual_temp;
         r.power_watts = actual_power;
 
-        r.gpu_name = gpu_name; 
+        r.gpu_name = gpu_name;
         r.device_id = device_id;
-        r.cc_major = cc_major; 
+        r.cc_major = cc_major;
         r.cc_minor = cc_minor;
-        r.sm_count = sm_count; 
+        r.sm_count = sm_count;
         r.l2_size_bytes = l2_size_bytes;
-        r.shared_mem_per_sm = shared_mem_per_sm; 
+        r.shared_mem_per_sm = shared_mem_per_sm;
         r.total_global_mem = total_global_mem;
         r.mem_bandwidth_GBps_est = mem_bandwidth_GBps_est;
         r.peak_flops_fp32_GFLOPs_est = peak_flops_fp32_GFLOPs_est;
-        r.driver_version = driver_version; 
+        r.driver_version = driver_version;
         r.cuda_runtime_version = cuda_runtime_version;
-        r.max_threads_per_sm = max_threads_per_sm; 
+        r.max_threads_per_sm = max_threads_per_sm;
         r.max_threads_per_block = max_threads_per_block;
         r.warp_size = warp_size;
 
         return r;
     }
 
-    void differ_size_loop(int num_samples, unsigned int seed = 0) {
+    std::string differ_size_loop(int num_samples, const std::string& output_name = "", unsigned int seed = 0) {
         // If seed is 0, use random seed; otherwise use provided seed
         unsigned int actual_seed = (seed == 0) ? random_device{}() : seed;
         current_seed = actual_seed;
+
+        // Build filename
+        std::string filename = build_filename(output_name, num_samples, actual_seed);
 
         mt19937 gen(actual_seed);
         uniform_real_distribution<> U(0.0, 1.0);
 
         printf("Starting NTT benchmarking with %d samples...\n", num_samples);
-        printf("Random seed: %u %s\n", actual_seed, 
+        printf("Random seed: %u %s\n", actual_seed,
                (seed == 0) ? "(randomly generated)" : "(user-provided)");
+        printf("Output file: %s\n\n", filename.c_str());
 
         for (int i = 0; i < num_samples; ++i) {
             int k = 15 + (int)std::floor(U(gen) * (24 - 15 + 1));  // k ∈ [15,24] uniform
@@ -417,72 +453,130 @@ public:
             CUDA_CHECK(cudaDeviceSynchronize());
 
             if ((i + 1) % 100 == 0) {
-                save_to_csv("ntt_benchmark_results.csv");
+                save_to_csv(filename);
                 data.clear();
                 printf("Checkpoint saved (%d samples so far)\n\n", i + 1);
             }
         }
         printf("Done!\n");
+        return filename; // Return filename for final save
     }
 
     void save_to_csv(const std::string& filename) {
-        std::ifstream fin(filename); 
-        bool exists = fin.good(); 
+        std::ifstream fin(filename);
+        bool exists = fin.good();
         fin.close();
 
         std::ofstream f(filename, std::ios::app);
-        if (!f.is_open()) { 
-            printf("Failed to open file: %s\n", filename.c_str()); 
-            return; 
+        if (!f.is_open()) {
+            printf("Failed to open file: %s\n", filename.c_str());
+            return;
         }
         if (!exists) write_csv_header(f);
 
-        for (const auto& d : data) { 
+        for (const auto& d : data) {
             write_csv_row(f, d);
         }
 
-        f.close(); 
+        f.close();
         printf("Results saved to %s\n", filename.c_str());
+    }
+
+    // Helper function to build filename
+    static std::string build_filename(const std::string& output_name, int num_samples, unsigned int seed) {
+        std::string filename = "benchmark_results";
+        if (!output_name.empty()) {
+            filename += "_" + output_name;
+        }
+        filename += "_N" + std::to_string(num_samples);
+        if (seed != 0) {
+            filename += "_S" + std::to_string(seed);
+        }
+        filename += ".csv";
+        return filename;
     }
 };
 
 int main(int argc, char** argv) {
-    if (argc < 3) {
-        printf("Usage: %s <method> <num_samples> [N] [repeats] [inner_iters] [seed]\n", argv[0]);
-        printf("  method: 1 = Custom-NTT\n");
+    if (argc < 2) {
+        printf("Usage: %s <num_samples> [output_name] [N] [repeats] [inner_iters] [seed]\n", argv[0]);
         printf("  num_samples: number of samples to run\n");
+        printf("  output_name: (optional) custom name for output file\n");
         printf("  N: (optional) fixed NTT size (power of 2). If not specified, random sizes will be used\n");
         printf("  repeats: (optional) number of repetitions (default: 10)\n");
         printf("  inner_iters: (optional) inner iterations (default: 50)\n");
         printf("  seed: (optional) random seed for reproducibility (default: random)\n");
+        printf("\nOutput file naming: benchmark_results_[output_name_]N{num_samples}[_S{seed}].csv\n");
         printf("\nExamples:\n");
-        printf("  %s 1 100                  # 100 samples, N randomly chosen as 2^k (k=10..20)\n", argv[0]);
-        printf("  %s 1 100 65536 10 50 42   # 100 samples, N=65536, repeats=10, inner_iters=50, seed=42\n", argv[0]);
-        printf("  %s 1 10 65536             # 10 samples, N=65536, default repeats and inner_iters\n", argv[0]);
+        printf("  %s 1000                      # Output: benchmark_results_N1000_S{random}.csv\n", argv[0]);
+        printf("  %s 1000 a100_ntt             # Output: benchmark_results_a100_ntt_N1000_S{random}.csv\n", argv[0]);
+        printf("  %s 500 test 65536 10 50 42   # Output: benchmark_results_test_N500_S42.csv (fixed N=65536)\n", argv[0]);
+        printf("  %s 1000 42                   # Output: benchmark_results_N1000_S42.csv (seed only)\n", argv[0]);
         return 1;
     }
 
-    int method = std::stoi(argv[1]);
-    int num_samples = std::stoi(argv[2]);
-    int N = (argc >= 4) ? std::stoi(argv[3]) : -1;
-    int repeats = (argc >= 5) ? std::stoi(argv[4]) : 10;
-    int inner_iters = (argc >= 6) ? std::stoi(argv[5]) : 50;
+    int num_samples = std::stoi(argv[1]);
+    std::string output_name = "";
+    int N = -1;
+    int repeats = 10;
+    int inner_iters = 50;
     unsigned int seed = 0; // 0 means random seed
-    
-    if (argc >= 7) {
-        seed = static_cast<unsigned int>(std::stoul(argv[6]));
+
+    // Parse optional arguments - need to determine if argv[2] is output_name or N (or seed)
+    if (argc >= 3) {
+        std::string arg2 = argv[2];
+        bool is_number = true;
+        for (char c : arg2) {
+            if (!isdigit(c)) {
+                is_number = false;
+                break;
+            }
+        }
+
+        if (is_number) {
+            // argv[2] is either N or seed
+            int value = std::stoi(argv[2]);
+            // If value is a power of 2 >= 2, treat as N; otherwise treat as seed
+            if (is_power_of_two(value) && value >= 2) {
+                N = value;
+                if (argc >= 4) repeats = std::stoi(argv[3]);
+                if (argc >= 5) inner_iters = std::stoi(argv[4]);
+                if (argc >= 6) seed = static_cast<unsigned int>(std::stoul(argv[5]));
+            } else {
+                // Treat as seed
+                seed = static_cast<unsigned int>(value);
+            }
+        } else {
+            // argv[2] is output_name
+            output_name = argv[2];
+
+            // Parse remaining arguments
+            if (argc >= 4) {
+                int value = std::stoi(argv[3]);
+                if (is_power_of_two(value) && value >= 2) {
+                    N = value;
+                    if (argc >= 5) repeats = std::stoi(argv[4]);
+                    if (argc >= 6) inner_iters = std::stoi(argv[5]);
+                    if (argc >= 7) seed = static_cast<unsigned int>(std::stoul(argv[6]));
+                } else {
+                    // Treat as seed
+                    seed = static_cast<unsigned int>(value);
+                }
+            }
+        }
     }
 
-    if (method != 1) { 
-        printf("Error: method must be 1 (Custom-NTT)\n"); 
-        return 1; 
-    }
-    if (num_samples <= 0) { 
-        printf("Error: num_samples must be > 0\n"); 
-        return 1; 
+    if (num_samples <= 0) {
+        printf("Error: num_samples must be > 0\n");
+        return 1;
     }
 
+    int method = 1; // Always use Custom-NTT
     Collector collector(method);
+
+    // Generate actual seed for filename consistency
+    unsigned int actual_seed = (seed == 0) ? random_device{}() : seed;
+    std::string filename = Collector::build_filename(output_name, num_samples, actual_seed);
 
     if (N > 0) {
         // Fixed N mode
@@ -490,39 +584,39 @@ int main(int argc, char** argv) {
             printf("Error: N must be a power of 2 and >= 2\n");
             return 1;
         }
-        
-        unsigned int actual_seed = (seed == 0) ? random_device{}() : seed;
+
         printf("Running fixed-N benchmarks (N=%d) with %d samples\n", N, num_samples);
-        printf("Random seed: %u %s\n\n", actual_seed,
+        printf("Random seed: %u %s\n", actual_seed,
                (seed == 0) ? "(randomly generated)" : "(user-provided)");
-        
+        printf("Output file: %s\n\n", filename.c_str());
+
         for (int i = 0; i < num_samples; ++i) {
             auto rec = collector.benchmark_NTT(N, 998244353u, 3u, actual_seed, inner_iters, repeats);
-            
-            std::ifstream fin("ntt_benchmark_results.csv"); 
-            bool exists = fin.good(); 
+
+            std::ifstream fin(filename);
+            bool exists = fin.good();
             fin.close();
-            
-            std::ofstream f("ntt_benchmark_results.csv", std::ios::app);
-            if (!f.is_open()) { 
-                printf("Failed to open output\n"); 
-                return 1; 
+
+            std::ofstream f(filename, std::ios::app);
+            if (!f.is_open()) {
+                printf("Failed to open output\n");
+                return 1;
             }
             if (!exists) write_csv_header(f);
             write_csv_row(f, rec);
             f.close();
-            
+
             if ((i + 1) % 100 == 0) {
                 printf("Completed %d samples\n", i + 1);
             }
         }
         printf("Done fixed-N runs.\n");
-    } 
-    else {
-        // Random N mode
-        collector.differ_size_loop(num_samples, seed);
-        collector.save_to_csv("ntt_benchmark_results.csv");
     }
-    
+    else {
+        // Random N mode - filename is built and returned by differ_size_loop
+        filename = collector.differ_size_loop(num_samples, output_name, seed);
+        collector.save_to_csv(filename);
+    }
+
     return 0;
 }
